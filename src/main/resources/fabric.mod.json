@@ -1,0 +1,37 @@
+{
+	"schemaVersion": 1,
+	"id": "timelesslib",
+	"version": "${version}",
+	"name": "TimelessLib",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"BoucningElf10"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/timelesslib/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"dev.bouncingelf10.timelesslib.TimelessLib"
+		],
+		"client": [
+			"dev.bouncingelf10.timelesslib.TimelessLibClient"
+		]
+	},
+	"mixins": [
+		"timelesslib.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.17.3",
+		"minecraft": "~1.21.10",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
