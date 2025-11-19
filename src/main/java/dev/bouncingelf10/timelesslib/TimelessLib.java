@@ -36,7 +36,7 @@ public class TimelessLib implements ModInitializer {
 		return serverScheduler != null;
 	}
 
-	public static Scheduler<MinecraftServer> getServerScheduler() {
+	public static Scheduler<MinecraftServer> getServerScheduler() throws IllegalStateException {
 		if (serverScheduler == null) throw new IllegalStateException("Server Scheduler is null! This likely happened due to the server not being initialized.");
 		return serverScheduler;
 	}
