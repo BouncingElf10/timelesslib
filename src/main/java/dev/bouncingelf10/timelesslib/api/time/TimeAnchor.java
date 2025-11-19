@@ -14,13 +14,14 @@ import dev.bouncingelf10.timelesslib.TimelessClock;
  * TimeAnchor realTimer = TimeAnchor.createRealTime();
  *
  * // Check if 5 seconds have passed
- * if (timer.hasElapsed(5, DurationUnit.SECONDS)) {
+ * if (timer.hasElapsed(Duration.ofSeconds(5))) {
  *     // Do something
  * }
  *
- * // Get elapsed time in different units
- * long ticks = timer.elapsedTicks();
- * long millis = timer.elapsed(DurationUnit.MILLISECONDS);
+ * // Get elapsed time
+ * Duration elapsed = timer.elapsed();
+ * long ticks = elapsed.toTicks();
+ * double seconds = elapsed.toSeconds();
  *
  * // Pause and resume
  * timer.pause();
@@ -31,6 +32,7 @@ import dev.bouncingelf10.timelesslib.TimelessClock;
  * timer.reset();
  * }</pre>
  *
+ * @see Duration
  * @see DurationUnit
  */
 public class TimeAnchor {
@@ -89,6 +91,15 @@ public class TimeAnchor {
     }
 
     /**
+     * Returns the elapsed time as a Duration.
+     *
+     * @return the elapsed Duration
+     */
+    public Duration elapsed() {
+        return Duration.ofNanos(elapsedNanos());
+    }
+
+    /**
      * Returns the elapsed time in the specified duration unit.
      * <p>
      * For example, {@code elapsed(DurationUnit.SECONDS)} returns the elapsed seconds.
@@ -138,6 +149,16 @@ public class TimeAnchor {
     }
 
     /**
+     * Checks if the specified duration has elapsed.
+     *
+     * @param duration the duration to check
+     * @return true if the specified duration has elapsed, false otherwise
+     */
+    public boolean hasElapsed(Duration duration) {
+        return elapsedNanos() >= duration.toNanos();
+    }
+
+    /**
      * Checks if the specified amount of time has elapsed.
      * <p>
      * For example, {@code hasElapsed(5, DurationUnit.SECONDS)} returns true if
@@ -149,7 +170,7 @@ public class TimeAnchor {
      * @return true if the specified duration has elapsed, false otherwise
      */
     public boolean hasElapsed(long amount, DurationUnit unit) {
-        return elapsedNanos() >= unit.toNanos(amount);
+        return hasElapsed(Duration.of(amount, unit));
     }
 
     /**
@@ -159,7 +180,7 @@ public class TimeAnchor {
      * @return true if the specified ticks have elapsed, false otherwise
      */
     public boolean hasElapsedTicks(long ticks) {
-        return hasElapsed(ticks, DurationUnit.TICKS);
+        return hasElapsed(Duration.ofTicks(ticks));
     }
 
     /**
@@ -169,7 +190,20 @@ public class TimeAnchor {
      * @return true if the specified seconds have elapsed, false otherwise
      */
     public boolean hasElapsedSeconds(long seconds) {
-        return hasElapsed(seconds, DurationUnit.SECONDS);
+        return hasElapsed(Duration.ofSeconds(seconds));
+    }
+
+    /**
+     * Returns the remaining time until the specified duration is reached.
+     * If the duration has already elapsed, returns a zero Duration.
+     *
+     * @param target the target duration
+     * @return the remaining Duration, or zero if the duration has elapsed
+     */
+    public Duration remaining(Duration target) {
+        long targetNanos = target.toNanos();
+        long elapsed = elapsedNanos();
+        return Duration.ofNanos(Math.max(0, targetNanos - elapsed));
     }
 
     /**
@@ -181,9 +215,7 @@ public class TimeAnchor {
      * @return the remaining time in nanoseconds, or 0 if the duration has elapsed
      */
     public long remaining(long amount, DurationUnit unit) {
-        long targetNanos = unit.toNanos(amount);
-        long elapsed = elapsedNanos();
-        return Math.max(0, targetNanos - elapsed);
+        return remaining(Duration.of(amount, unit)).toNanos();
     }
 
     /**
@@ -266,19 +298,42 @@ public class TimeAnchor {
      * Creates a snapshot of the current elapsed time that can be compared later.
      * This is useful for measuring time between specific events.
      *
-     * @return the current elapsed time in nanoseconds
+     * @return the current elapsed Duration
      */
-    public long snapshot() {
-        return elapsedNanos();
+    public Duration snapshot() {
+        return Duration.ofNanos(elapsedNanos());
     }
 
     /**
      * Returns the elapsed time since a previous snapshot.
      *
-     * @param previousSnapshot a snapshot value from {@link #snapshot()}
-     * @return the elapsed time in nanoseconds since the snapshot
+     * @param previousSnapshot a snapshot from {@link #snapshot()}
+     * @return the elapsed Duration since the snapshot
      */
-    public long sinceSnapshot(long previousSnapshot) {
+    public Duration sinceSnapshot(Duration previousSnapshot) {
+        return elapsed().minus(previousSnapshot);
+    }
+
+    /**
+     * Creates a snapshot of the current elapsed time in nanoseconds.
+     *
+     * @return the current elapsed time in nanoseconds
+     * @deprecated Use {@link #snapshot()} which returns a Duration
+     */
+    @Deprecated
+    public long snapshotNanos() {
+        return elapsedNanos();
+    }
+
+    /**
+     * Returns the elapsed time since a previous nanosecond snapshot.
+     *
+     * @param previousSnapshot a snapshot value from {@link #snapshotNanos()}
+     * @return the elapsed time in nanoseconds since the snapshot
+     * @deprecated Use {@link #sinceSnapshot(Duration)} instead
+     */
+    @Deprecated
+    public long sinceSnapshotNanos(long previousSnapshot) {
         return elapsedNanos() - previousSnapshot;
     }
 
