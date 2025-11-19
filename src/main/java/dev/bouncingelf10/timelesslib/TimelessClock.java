@@ -1,6 +1,6 @@
 package dev.bouncingelf10.timelesslib;
 
-import dev.bouncingelf10.timelesslib.api.platform.TimelessPlatform;
+import dev.bouncingelf10.timelesslib.fabric.TimelessFabricHelper;
 
 public final class TimelessClock {
     private static long lastTime = System.nanoTime();
@@ -8,7 +8,7 @@ public final class TimelessClock {
     private static boolean paused = false;
 
     public static void update() {
-        if (!TimelessPlatform.INSTANCE.shouldAdvanceTime()) {
+        if (!TimelessFabricHelper.shouldAdvanceTime()) {
             paused = true;
             deltaNanos = 0;
             return;
