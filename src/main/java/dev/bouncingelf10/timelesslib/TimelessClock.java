@@ -58,4 +58,16 @@ public final class TimelessClock {
      * @return current real-world time in nanoseconds
      */
     public static long realTime() { return System.nanoTime(); }
+
+    @FunctionalInterface
+    public interface TimeSource {
+        long now();
+    }
+
+    public final class TimeSources {
+        public static final TimeSource GAME_TIME = TimelessClock::now;
+        public static final TimeSource REAL_TIME = TimelessClock::realTime;
+
+        private TimeSources() {}
+    }
 }
