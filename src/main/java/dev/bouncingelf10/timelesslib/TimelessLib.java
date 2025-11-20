@@ -1,12 +1,9 @@
 package dev.bouncingelf10.timelesslib;
 
 import dev.bouncingelf10.timelesslib.api.scheduler.Scheduler;
-import dev.bouncingelf10.timelesslib.api.time.Duration;
-import dev.bouncingelf10.timelesslib.fabric.TimelessFabricHelper;
 import net.fabricmc.api.ModInitializer;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.server.MinecraftServer;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -23,11 +20,11 @@ public class TimelessLib implements ModInitializer {
 		LOGGER.info("TimelessLib Sever Initialising");
 
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
-			LOGGER.info("TimelessLib Schedulers Initialised for Server");
+			LOGGER.info("TimelessLib Scheduler Initialised for Server");
 			serverScheduler = new Scheduler<>(() -> server);
 		});
 		ServerLifecycleEvents.SERVER_STOPPED.register(server ->  {
-			LOGGER.info("TimelessLib Schedulers Stopped for Server");
+			LOGGER.info("TimelessLib Scheduler Stopped for Server");
 			serverScheduler = null;
 		});
 	}

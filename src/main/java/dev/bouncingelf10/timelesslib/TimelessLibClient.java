@@ -5,7 +5,6 @@ import dev.bouncingelf10.timelesslib.fabric.TimelessFabricHelper;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
-import net.minecraft.server.MinecraftServer;
 
 import static com.mojang.text2speech.Narrator.LOGGER;
 
