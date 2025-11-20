@@ -369,7 +369,6 @@ public class TimeAnchor {
     /**
      * Creates and returns a new TimeAnchor that uses real-time measurement.
      * This anchor continues running even when the game is paused.
-     * Useful for performance measurements, real-world timers, or UI animations.
      *
      * @return a new TimeAnchor that uses real-time
      */
