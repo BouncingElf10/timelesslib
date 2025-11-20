@@ -40,24 +40,24 @@ public class TimeAnchor {
     private long accumulatedNanos;
     private long pausedAtNanos;
     private boolean isPaused;
-    private final boolean respectsPlatformPause;
+    private final TimelessClock.TimeSource timeSource;
 
     /**
      * Creates a new TimeAnchor starting at the current time.
      * By default, respects the platform's pause state (e.g., game pause).
      */
     public TimeAnchor() {
-        this(true);
+        this(TimelessClock.TimeSources.GAME_TIME);
     }
 
     /**
      * Creates a new TimeAnchor with specified pause behavior.
      *
-     * @param respectsPlatformPause if true, uses TimelessClock (respects game pause);
-     *                              if false, uses System.nanoTime() (always runs)
+     * @param timeSource What TimeSource the TimeAnchor should use.
+     * @see TimelessClock.TimeSources
      */
-    public TimeAnchor(boolean respectsPlatformPause) {
-        this.respectsPlatformPause = respectsPlatformPause;
+    public TimeAnchor(TimelessClock.TimeSource timeSource) {
+        this.timeSource = timeSource;
         this.startNano = getCurrentTime();
         this.accumulatedNanos = 0;
         this.pausedAtNanos = 0;
@@ -70,7 +70,7 @@ public class TimeAnchor {
      * @return current time in nanoseconds
      */
     private long getCurrentTime() {
-        return respectsPlatformPause ? TimelessClock.now() : System.nanoTime();
+        return timeSource.now();
     }
 
     /**
@@ -268,12 +268,10 @@ public class TimeAnchor {
     }
 
     /**
-     * Returns whether this TimeAnchor respects the platform's pause state.
-     *
-     * @return true if respecting platform pause, false if using real-time
+     * Returns the TimeSource used by this anchor.
      */
-    public boolean respectsPlatformPause() {
-        return respectsPlatformPause;
+    public TimelessClock.TimeSource getTimeSource() {
+        return timeSource;
     }
 
     /**
@@ -365,7 +363,7 @@ public class TimeAnchor {
      * @return a new TimeAnchor that respects platform pause
      */
     public static TimeAnchor create() {
-        return new TimeAnchor(true);
+        return new TimeAnchor(TimelessClock.TimeSources.GAME_TIME);
     }
 
     /**
@@ -376,7 +374,7 @@ public class TimeAnchor {
      * @return a new TimeAnchor that uses real-time
      */
     public static TimeAnchor createRealTime() {
-        return new TimeAnchor(false);
+        return new TimeAnchor(TimelessClock.TimeSources.REAL_TIME);
     }
 
     /**
@@ -386,17 +384,17 @@ public class TimeAnchor {
      * @return a new paused TimeAnchor
      */
     public static TimeAnchor createPaused() {
-        return createPaused(true);
+        return createPaused(TimelessClock.TimeSources.GAME_TIME);
     }
 
     /**
      * Creates and returns a new TimeAnchor that is immediately paused.
      *
-     * @param respectsPlatformPause if true, respects game pause; if false, uses real-time
+     * @param source TimeSource the TimeAnchor should use
      * @return a new paused TimeAnchor
      */
-    public static TimeAnchor createPaused(boolean respectsPlatformPause) {
-        TimeAnchor anchor = new TimeAnchor(respectsPlatformPause);
+    public static TimeAnchor createPaused(TimelessClock.TimeSource source) {
+        TimeAnchor anchor = new TimeAnchor(source);
         anchor.pause();
         return anchor;
     }
