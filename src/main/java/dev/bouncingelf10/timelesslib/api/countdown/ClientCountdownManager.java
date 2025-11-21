@@ -17,6 +17,16 @@ public class ClientCountdownManager<T> extends CountdownManager<T> {
         super(contextProvider, poolSize);
     }
 
+    public ClientCountdown startClient(Duration total) {
+        Countdown base = super.start(total, Duration.ofMillis(10), TimelessClock.TimeSources.GAME_TIME);
+        return new ClientCountdown(base);
+    }
+
+    public ClientCountdown startClientRealtime(Duration total) {
+        Countdown base = super.start(total, Duration.ofMillis(10), TimelessClock.TimeSources.REAL_TIME);
+        return new ClientCountdown(base);
+    }
+
     public ClientCountdown startClient(Duration total, Duration tickEvery, TimelessClock.TimeSource timeSource) {
         Countdown base = super.start(total, tickEvery, timeSource);
         return new ClientCountdown(base);

@@ -50,6 +50,17 @@ public class TimelessFabricHelper {
         }
         return true;
     }
+
+    // ============= COMMON ===============
+
+    public static boolean isClient() {
+        return FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT;
+    }
+
+    public static boolean isServer() {
+        return FabricLoader.getInstance().getEnvironmentType() == EnvType.SERVER;
+    }
+
     // ============== SERVER ===============
     public static void serverDisplayToUser(long nanosLeft, ServerPlayer player) {
         if (FabricLoader.getInstance().getEnvironmentType() != EnvType.SERVER) return;
