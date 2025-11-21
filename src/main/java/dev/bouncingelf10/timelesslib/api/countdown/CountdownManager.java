@@ -1,4 +1,4 @@
-package dev.bouncingelf10.timelesslib.api.scheduler;
+package dev.bouncingelf10.timelesslib.api.countdown;
 
 import dev.bouncingelf10.timelesslib.TimelessClock;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
@@ -7,7 +7,6 @@ import dev.bouncingelf10.timelesslib.fabric.TimelessFabricHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Vector3d;
 
 import java.util.*;
 import java.util.concurrent.*;

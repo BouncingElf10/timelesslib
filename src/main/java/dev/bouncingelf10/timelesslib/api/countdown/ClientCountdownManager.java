@@ -1,4 +1,4 @@
-package dev.bouncingelf10.timelesslib.api.scheduler;
+package dev.bouncingelf10.timelesslib.api.countdown;
 
 import dev.bouncingelf10.timelesslib.TimelessClock;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
