@@ -14,162 +14,63 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/**
- * A flexible scheduler for executing tasks after a delay or periodically.
-
- * <p>Example usage:</p>
- * <pre>{@code
- * Scheduler<MyContext> scheduler = new Scheduler<>(() -> myContext);
- * // if not making your own scheduler, use the Timeless one:
- * TimelessLib.getServerScheduler() or TimelessLib.getClientScheduler()
- *
- * // Run a task once after 5 seconds
- * scheduler.after(Duration.ofSeconds(5), server -> server.doSomething());
- *
- * // Run a task every 2 seconds
- * Scheduler.TaskHandle handle = scheduler.every(Duration.ofSeconds(2), client -> client.doSomethingPeriodic());
- *
- * // Pause the task
- * handle.pause();
- *
- * // Resume the task
- * handle.resume();
- *
- * // Cancel the task
- * handle.cancel();
- *
- * // Shutdown the scheduler
- * scheduler.shutdown();
- * }</pre>
- *
- * @param <T> the type of context object supplied to scheduled tasks
- */
 public class Scheduler<T> {
     private final ScheduledThreadPoolExecutor executor;
     private final Map<String, ScheduledTask> tasks = new ConcurrentHashMap<>();
     private final Supplier<T> contextProvider;
 
-    /**
-     * Creates a new scheduler using a thread pool sized based on available processors.
-     *
-     * @param contextProvider a supplier for the context passed to each task
-     */
     public Scheduler(Supplier<T> contextProvider) {
         this(contextProvider, Math.max(1, Runtime.getRuntime().availableProcessors()));
     }
 
-    /**
-     * Creates a new scheduler with a custom thread pool size.
-     *
-     * @param contextProvider a supplier for the context passed to each task
-     * @param poolSize the number of threads in the scheduler's thread pool
-     */
     public Scheduler(Supplier<T> contextProvider, int poolSize) {
         this.contextProvider = contextProvider;
         this.executor = new ScheduledThreadPoolExecutor(poolSize);
         this.executor.setRemoveOnCancelPolicy(true);
     }
 
-    /**
-     * Schedules a one-shot task to run after the specified delay using real time.
-     *
-     * @param delay the delay before executing the task
-     * @param task  the task to run
-     * @return a handle for controlling the task
-     */
     public TaskHandle afterRealtime(Duration delay, Consumer<T> task) {
         Objects.requireNonNull(delay);
         Objects.requireNonNull(task);
         return scheduleInternal(delay, null, () -> task.accept(contextProvider.get()), false, TimelessClock.TimeSources.REAL_TIME);
     }
 
-    /**
-     * Schedules a one-shot task to run after the specified delay.
-     *
-     * @param delay the delay before executing the task
-     * @param task  the task to run
-     * @return a handle for controlling the task
-     */
     public TaskHandle after(Duration delay, Consumer<T> task) {
         Objects.requireNonNull(delay);
         Objects.requireNonNull(task);
         return scheduleInternal(delay, null, () -> task.accept(contextProvider.get()), false, TimelessClock.TimeSources.GAME_TIME);
     }
 
-    /**
-     * Schedules a repeating task with a fixed delay between the end of one execution
-     * and the start of the next using real time.
-     *
-     * @param period the interval between executions
-     * @param task   the task to run periodically
-     * @return a handle for controlling the task
-     */
     public TaskHandle everyRealtime(Duration period, Consumer<T> task) {
         Objects.requireNonNull(period);
         Objects.requireNonNull(task);
         return scheduleInternal(period, period, () -> task.accept(contextProvider.get()), true, TimelessClock.TimeSources.REAL_TIME);
     }
 
-    /**
-     * Schedules a repeating task with a fixed delay between the end of one execution
-     * and the start of the next.
-     *
-     * @param period the interval between executions
-     * @param task   the task to run periodically
-     * @return a handle for controlling the task
-     */
     public TaskHandle every(Duration period, Consumer<T> task) {
         Objects.requireNonNull(period);
         Objects.requireNonNull(task);
         return scheduleInternal(period, period, () -> task.accept(contextProvider.get()), true, TimelessClock.TimeSources.GAME_TIME);
     }
 
-    /**
-     * Schedules a repeating task at a fixed rate using real time, where the interval
-     * is measured from the scheduled start of the previous execution.
-     *
-     * @param period the interval between scheduled executions
-     * @param task   the task to run periodically
-     * @return a handle for controlling the task
-     */
     public TaskHandle everyFixedRateRealtime(Duration period, Consumer<T> task) {
         Objects.requireNonNull(period);
         Objects.requireNonNull(task);
         return scheduleInternal(period, period, () -> task.accept(contextProvider.get()), true, true, TimelessClock.TimeSources.REAL_TIME);
     }
 
-    /**
-     * Schedules a repeating task at a fixed rate, where the interval is measured from
-     * the scheduled start of the previous execution.
-     *
-     * @param period the interval between scheduled executions
-     * @param task   the task to run periodically
-     * @return a handle for controlling the task
-     */
     public TaskHandle everyFixedRate(Duration period, Consumer<T> task) {
         Objects.requireNonNull(period);
         Objects.requireNonNull(task);
         return scheduleInternal(period, period, () -> task.accept(contextProvider.get()), true, true, TimelessClock.TimeSources.GAME_TIME);
     }
 
-    /**
-     * Cancels all tasks and immediately shuts down the scheduler.
-     * Tasks that are currently executing may be interrupted.
-     */
     public void shutdown() {
         tasks.values().forEach(ScheduledTask::cancelSilently);
         tasks.clear();
         executor.shutdownNow();
     }
 
-    /**
-     * Cancels all tasks and gracefully shuts down the scheduler, waiting up to the
-     * specified timeout for tasks to complete.
-     *
-     * @param timeout the maximum time to wait for termination
-     * @param unit the time unit of the timeout
-     * @throws InterruptedException if interrupted while waiting
-     */
     public void shutdownGracefully(long timeout, TimeUnit unit) throws InterruptedException {
         tasks.values().forEach(ScheduledTask::cancelSilently);
         tasks.clear();
@@ -191,9 +92,13 @@ public class Scheduler<T> {
 
     public interface TaskHandle {
         boolean cancel();
+
         boolean pause();
+
         boolean resume();
+
         boolean isCancelled();
+
         boolean isPaused();
 
         Optional<Duration> getRemainingDelay();
@@ -251,7 +156,7 @@ public class Scheduler<T> {
             } catch (Throwable t) {
                 TimelessLib.LOGGER.error("Failed to execute scheduled task: ", t);
             }
-    
+
             if (!repeating) {
                 tasks.remove(id);
                 return;

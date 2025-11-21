@@ -2,39 +2,6 @@ package dev.bouncingelf10.timelesslib.api.time;
 
 import dev.bouncingelf10.timelesslib.TimelessClock;
 
-/**
- * A time measurement utility that captures a point in time and measures elapsed duration.
- *
- * <p>Example usage:</p>
- * <pre>{@code
- * // Respects game pause
- * TimeAnchor gameTimer = TimeAnchor.create();
- *
- * // Always runs, even when game is paused
- * TimeAnchor realTimer = TimeAnchor.createRealTime();
- *
- * // Check if 5 seconds have passed
- * if (timer.hasElapsed(Duration.ofSeconds(5))) {
- *     // Do something
- * }
- *
- * // Get elapsed time
- * Duration elapsed = timer.elapsed();
- * long ticks = elapsed.toTicks();
- * double seconds = elapsed.toSeconds();
- *
- * // Pause and resume
- * timer.pause();
- * // ... some time passes ...
- * timer.resume();
- *
- * // Reset to current time
- * timer.reset();
- * }</pre>
- *
- * @see Duration
- * @see DurationUnit
- */
 public class TimeAnchor {
     private long startNano;
     private long accumulatedNanos;
@@ -42,20 +9,10 @@ public class TimeAnchor {
     private boolean isPaused;
     private final TimelessClock.TimeSource timeSource;
 
-    /**
-     * Creates a new TimeAnchor starting at the current time.
-     * By default, respects the platform's pause state (e.g., game pause).
-     */
     public TimeAnchor() {
         this(TimelessClock.TimeSources.GAME_TIME);
     }
 
-    /**
-     * Creates a new TimeAnchor with specified pause behavior.
-     *
-     * @param timeSource What TimeSource the TimeAnchor should use.
-     * @see TimelessClock.TimeSources
-     */
     public TimeAnchor(TimelessClock.TimeSource timeSource) {
         this.timeSource = timeSource;
         this.startNano = getCurrentTime();
@@ -64,25 +21,10 @@ public class TimeAnchor {
         this.isPaused = false;
     }
 
-    /**
-     * Gets the current time based on this anchor's pause behavior.
-     *
-     * @return current time in nanoseconds
-     */
     private long getCurrentTime() {
         return timeSource.now();
     }
 
-    /**
-     * Returns the elapsed time in nanoseconds since this anchor was created or last reset,
-     * excluding any time spent paused.
-     * <p>
-     * Note: If this anchor respects platform pause, time does not advance when
-     * the TimelessClock is paused (e.g., when the game is paused).
-     * </p>
-     *
-     * @return the elapsed time in nanoseconds
-     */
     public long elapsedNanos() {
         if (isPaused) {
             return accumulatedNanos;
@@ -90,154 +32,60 @@ public class TimeAnchor {
         return accumulatedNanos + (getCurrentTime() - startNano);
     }
 
-    /**
-     * Returns the elapsed time as a Duration.
-     *
-     * @return the elapsed Duration
-     */
     public Duration elapsed() {
         return Duration.ofNanos(elapsedNanos());
     }
 
-    /**
-     * Returns the elapsed time in the specified duration unit.
-     * <p>
-     * For example, {@code elapsed(DurationUnit.SECONDS)} returns the elapsed seconds.
-     * </p>
-     *
-     * @param unit the unit to convert the elapsed time to
-     * @return the elapsed time in the specified unit
-     */
     public double elapsed(DurationUnit unit) {
         return unit.from(elapsedNanos());
     }
 
-    /**
-     * Returns the elapsed time in Minecraft game ticks (20 ticks per second).
-     *
-     * @return the elapsed time in ticks
-     */
     public int elapsedTicks() {
         return (int) elapsed(DurationUnit.TICKS);
     }
 
-    /**
-     * Returns the elapsed time in milliseconds.
-     *
-     * @return the elapsed time in milliseconds
-     */
     public double elapsedMillis() {
         return elapsed(DurationUnit.MILLISECONDS);
     }
 
-    /**
-     * Returns the elapsed time in seconds.
-     *
-     * @return the elapsed time in seconds
-     */
     public double elapsedSeconds() {
         return elapsed(DurationUnit.SECONDS);
     }
 
-    /**
-     * Returns the elapsed time in minutes.
-     *
-     * @return the elapsed time in minutes
-     */
     public double elapsedMinutes() {
         return elapsed(DurationUnit.MINUTES);
     }
 
-    /**
-     * Checks if the specified duration has elapsed.
-     *
-     * @param duration the duration to check
-     * @return true if the specified duration has elapsed, false otherwise
-     */
     public boolean hasElapsed(Duration duration) {
         return elapsedNanos() >= duration.toNanos();
     }
 
-    /**
-     * Checks if the specified amount of time has elapsed.
-     * <p>
-     * For example, {@code hasElapsed(5, DurationUnit.SECONDS)} returns true if
-     * 5 or more seconds have passed.
-     * </p>
-     *
-     * @param amount the amount of time to check
-     * @param unit the unit of time
-     * @return true if the specified duration has elapsed, false otherwise
-     */
     public boolean hasElapsed(long amount, DurationUnit unit) {
         return hasElapsed(Duration.of(amount, unit));
     }
 
-    /**
-     * Checks if the specified number of ticks has elapsed.
-     *
-     * @param ticks the number of Minecraft ticks to check
-     * @return true if the specified ticks have elapsed, false otherwise
-     */
     public boolean hasElapsedTicks(long ticks) {
         return hasElapsed(Duration.ofTicks(ticks));
     }
 
-    /**
-     * Checks if the specified number of seconds has elapsed.
-     *
-     * @param seconds the number of seconds to check
-     * @return true if the specified seconds have elapsed, false otherwise
-     */
     public boolean hasElapsedSeconds(long seconds) {
         return hasElapsed(Duration.ofSeconds(seconds));
     }
 
-    /**
-     * Returns the remaining time until the specified duration is reached.
-     * If the duration has already elapsed, returns a zero Duration.
-     *
-     * @param target the target duration
-     * @return the remaining Duration, or zero if the duration has elapsed
-     */
     public Duration remaining(Duration target) {
         long targetNanos = target.toNanos();
         long elapsed = elapsedNanos();
         return Duration.ofNanos(Math.max(0, targetNanos - elapsed));
     }
 
-    /**
-     * Returns the remaining time until the specified duration is reached.
-     * If the duration has already elapsed, returns 0.
-     *
-     * @param amount the target duration amount
-     * @param unit the unit of the target duration
-     * @return the remaining time in nanoseconds, or 0 if the duration has elapsed
-     */
     public long remaining(long amount, DurationUnit unit) {
         return remaining(Duration.of(amount, unit)).toNanos();
     }
 
-    /**
-     * Returns the remaining time in the specified unit until the target duration is reached.
-     *
-     * @param targetAmount the target duration amount
-     * @param targetUnit the unit of the target duration
-     * @param returnUnit the unit to return the remaining time in
-     * @return the remaining time in the specified return unit, or 0 if elapsed
-     */
     public double remaining(long targetAmount, DurationUnit targetUnit, DurationUnit returnUnit) {
         return returnUnit.from(remaining(targetAmount, targetUnit));
     }
 
-    /**
-     * Pauses the time measurement. While paused, elapsed time will not increase.
-     * If already paused, this method has no effect.
-     * <p>
-     * Note: This is independent of the TimelessClock's paused state. This allows
-     * you to pause individual timers even when the game is running.
-     * </p>
-     */
     public void pause() {
         if (!isPaused) {
             accumulatedNanos += getCurrentTime() - startNano;
@@ -246,10 +94,6 @@ public class TimeAnchor {
         }
     }
 
-    /**
-     * Resumes time measurement after being paused.
-     * If not currently paused, this method has no effect.
-     */
     public void resume() {
         if (isPaused) {
             startNano = getCurrentTime();
@@ -258,25 +102,14 @@ public class TimeAnchor {
         }
     }
 
-    /**
-     * Returns whether this TimeAnchor is currently paused.
-     *
-     * @return true if paused, false otherwise
-     */
     public boolean isPaused() {
         return isPaused;
     }
 
-    /**
-     * Returns the TimeSource used by this anchor.
-     */
     public TimelessClock.TimeSource getTimeSource() {
         return timeSource;
     }
 
-    /**
-     * Resets this TimeAnchor to the current time, clearing all elapsed time and pause state.
-     */
     public void reset() {
         this.startNano = getCurrentTime();
         this.accumulatedNanos = 0;
@@ -284,114 +117,50 @@ public class TimeAnchor {
         this.isPaused = false;
     }
 
-    /**
-     * Resets this TimeAnchor and immediately pauses it.
-     */
     public void resetAndPause() {
         reset();
         pause();
     }
 
-    /**
-     * Creates a snapshot of the current elapsed time that can be compared later.
-     * This is useful for measuring time between specific events.
-     *
-     * @return the current elapsed Duration
-     */
     public Duration snapshot() {
         return Duration.ofNanos(elapsedNanos());
     }
 
-    /**
-     * Returns the elapsed time since a previous snapshot.
-     *
-     * @param previousSnapshot a snapshot from {@link #snapshot()}
-     * @return the elapsed Duration since the snapshot
-     */
     public Duration sinceSnapshot(Duration previousSnapshot) {
         return elapsed().minus(previousSnapshot);
     }
 
-    /**
-     * Creates a snapshot of the current elapsed time in nanoseconds.
-     *
-     * @return the current elapsed time in nanoseconds
-     * @deprecated Use {@link #snapshot()} which returns a Duration
-     */
     @Deprecated
     public long snapshotNanos() {
         return elapsedNanos();
     }
 
-    /**
-     * Returns the elapsed time since a previous nanosecond snapshot.
-     *
-     * @param previousSnapshot a snapshot value from {@link #snapshotNanos()}
-     * @return the elapsed time in nanoseconds since the snapshot
-     * @deprecated Use {@link #sinceSnapshot(Duration)} instead
-     */
     @Deprecated
     public long sinceSnapshotNanos(long previousSnapshot) {
         return elapsedNanos() - previousSnapshot;
     }
 
-    /**
-     * Returns a string representation of the elapsed time since this anchor was created or last reset.
-     * The elapsed time is formatted using a compact time format.
-     *
-     * @return a string representing the formatted elapsed time
-     */
     @Override
     public String toString() {
         return TimeFormatter.format(elapsedNanos(), TimeFormatter.TimeFormat.COMPACT);
     }
 
-    /**
-     * Converts the elapsed time to a formatted string based on the specified format.
-     *
-     * @param format the desired format for representing the elapsed time
-     * @return a string representing the elapsed time in the specified format
-     */
     public String toString(TimeFormatter.TimeFormat format) {
         return TimeFormatter.format(elapsedNanos(), format);
     }
 
-    /**
-     * Creates and returns a new TimeAnchor starting at the current time.
-     * This anchor respects the platform's pause state (e.g., game pause).
-     *
-     * @return a new TimeAnchor that respects platform pause
-     */
     public static TimeAnchor create() {
         return new TimeAnchor(TimelessClock.TimeSources.GAME_TIME);
     }
 
-    /**
-     * Creates and returns a new TimeAnchor that uses real-time measurement.
-     * This anchor continues running even when the game is paused.
-     *
-     * @return a new TimeAnchor that uses real-time
-     */
     public static TimeAnchor createRealTime() {
         return new TimeAnchor(TimelessClock.TimeSources.REAL_TIME);
     }
 
-    /**
-     * Creates and returns a new TimeAnchor that is immediately paused.
-     * By default, respects the platform's pause state.
-     *
-     * @return a new paused TimeAnchor
-     */
     public static TimeAnchor createPaused() {
         return createPaused(TimelessClock.TimeSources.GAME_TIME);
     }
 
-    /**
-     * Creates and returns a new TimeAnchor that is immediately paused.
-     *
-     * @param source TimeSource the TimeAnchor should use
-     * @return a new paused TimeAnchor
-     */
     public static TimeAnchor createPaused(TimelessClock.TimeSource source) {
         TimeAnchor anchor = new TimeAnchor(source);
         anchor.pause();
