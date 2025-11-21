@@ -78,6 +78,8 @@ public class CountdownManager<T> {
         private final List<BiConsumer<T, Duration>> onTick = Collections.synchronizedList(new ArrayList<>());
         private final List<Consumer<T>> onFinish = Collections.synchronizedList(new ArrayList<>());
         private final NavigableMap<Long, List<Consumer<T>>> thresholds = new ConcurrentSkipListMap<>(Collections.reverseOrder());
+        private final Map<Long, List<Consumer<T>>> intervalHandlers = new ConcurrentHashMap<>();
+        private final Map<Long, Long> lastIntervalFire = new ConcurrentHashMap<>();
 
         Countdown(Duration total, Duration tickEvery, TimelessClock.TimeSource timeSource) {
             this.total = total;
@@ -123,6 +125,18 @@ public class CountdownManager<T> {
                     }
                 }
             } catch (Throwable ignored) {}
+
+            for (var entry : intervalHandlers.entrySet()) {
+                long interval = entry.getKey();
+
+                long last = lastIntervalFire.get(interval);
+                if (remaining <= last - interval) {
+                    for (Consumer<T> h : entry.getValue()) {
+                        try { h.accept(ctx); } catch (Throwable t) { t.printStackTrace(); }
+                    }
+                    lastIntervalFire.put(interval, remaining);
+                }
+            }
 
             if (!thresholds.isEmpty()) {
                 Iterator<Map.Entry<Long, List<Consumer<T>>>> it = thresholds.entrySet().iterator();
@@ -222,35 +236,36 @@ public class CountdownManager<T> {
             thresholds.computeIfAbsent(n, k -> Collections.synchronizedList(new ArrayList<>())).add(handler);
             return this;
         }
+        
+        public Countdown every(Duration interval, Consumer<T> handler) {
+            long nanos = interval.toNanos();
+            intervalHandlers.computeIfAbsent(nanos, k -> Collections.synchronizedList(new ArrayList<>())).add(handler);
+            lastIntervalFire.putIfAbsent(nanos, totalNanos);
+            return this;
+        }
 
         public Countdown displayToUser(ServerPlayer player) {
-            TimelessFabricHelper.serverDisplayToUser(remaining().toNanos(), player);
-            return this;
+            return every(Duration.ofMillis(10), server -> TimelessFabricHelper.serverDisplayToUser(remaining().toNanos(), player));
         }
 
         public Countdown displayToUser(ServerPlayer player, TimeFormatter.TimeFormat timeFormat, String prefix, String suffix) {
-            TimelessFabricHelper.serverDisplayToUser(remaining().toNanos(), player, timeFormat, prefix, suffix);
-            return this;
+            return every(Duration.ofMillis(10), server -> TimelessFabricHelper.serverDisplayToUser(remaining().toNanos(), player, timeFormat, prefix, suffix));
         }
 
         public Countdown displayAllUsers() {
-            TimelessFabricHelper.serverDisplayAllUsers(remaining().toNanos());
-            return this;
+            return every(Duration.ofMillis(10), server -> TimelessFabricHelper.serverDisplayAllUsers(remaining().toNanos()));
         }
 
         public Countdown displayAllUsers(TimeFormatter.TimeFormat timeFormat, String prefix, String suffix) {
-            TimelessFabricHelper.serverDisplayAllUsers(remaining().toNanos(), timeFormat, prefix, suffix);
-            return this;
+            return every(Duration.ofMillis(10), server -> TimelessFabricHelper.serverDisplayAllUsers(remaining().toNanos(), timeFormat, prefix, suffix));
         }
 
         public Countdown displayNearbyUsers(Vec3 pos, float radius) {
-            TimelessFabricHelper.serverDisplayNearbyUsers(remaining().toNanos(), pos, radius);
-            return this;
+            return every(Duration.ofMillis(10), server -> TimelessFabricHelper.serverDisplayNearbyUsers(remaining().toNanos(), pos, radius));
         }
 
         public Countdown displayNearbyUsers(Vec3 pos, float radius, TimeFormatter.TimeFormat timeFormat, String prefix, String suffix) {
-            TimelessFabricHelper.serverDisplayNearbyUsers(remaining().toNanos(), pos, radius, timeFormat, prefix, suffix);
-            return this;
+            return every(Duration.ofMillis(10), server -> TimelessFabricHelper.serverDisplayNearbyUsers(remaining().toNanos(), pos, radius, timeFormat, prefix, suffix));
         }
 
         public Countdown displayNearbyUsers(ServerPlayer player, float radius) {

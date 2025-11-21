@@ -13,9 +13,9 @@ import org.slf4j.LoggerFactory;
 public class TimelessLib implements ModInitializer {
 	public static final String MOD_ID = "timelesslib";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
-	@Nullable public static MinecraftServer server;
-	@Nullable public static Scheduler<MinecraftServer> serverScheduler;
-	@Nullable public static CountdownManager<MinecraftServer> serverCountdownManager;
+	@Nullable private static MinecraftServer server;
+	@Nullable private static Scheduler<MinecraftServer> serverScheduler;
+	@Nullable private static CountdownManager<MinecraftServer> serverCountdownManager;
 
 	@Override
 	public void onInitialize() {
@@ -37,6 +37,11 @@ public class TimelessLib implements ModInitializer {
 
 	public static boolean isServerInitialized() {
 		return serverScheduler != null;
+	}
+
+	public static MinecraftServer getServer() throws IllegalStateException {
+		if (server == null) throw new IllegalStateException("Server is null! This likely happened due to the server not being initialized.");
+		return server;
 	}
 
 	public static Scheduler<MinecraftServer> getServerScheduler() throws IllegalStateException {
