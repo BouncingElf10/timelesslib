@@ -1,5 +1,6 @@
 package dev.bouncingelf10.timelesslib;
 
+import dev.bouncingelf10.timelesslib.api.cooldown.ServerCooldownManager;
 import dev.bouncingelf10.timelesslib.api.countdown.CountdownManager;
 import dev.bouncingelf10.timelesslib.api.scheduler.Scheduler;
 import net.fabricmc.api.ModInitializer;
@@ -16,6 +17,7 @@ public class TimelessLib implements ModInitializer {
 	@Nullable private static MinecraftServer server;
 	@Nullable private static Scheduler<MinecraftServer> serverScheduler;
 	@Nullable private static CountdownManager<MinecraftServer> serverCountdownManager;
+	@Nullable private static ServerCooldownManager<MinecraftServer> serverCooldownManager;
 
 	@Override
 	public void onInitialize() {
@@ -26,12 +28,14 @@ public class TimelessLib implements ModInitializer {
 			TimelessLib.server = server;
 			serverScheduler = new Scheduler<>(() -> server);
 			serverCountdownManager = new CountdownManager<>(() -> server);
+			serverCooldownManager = new ServerCooldownManager<>(() -> server);
 		});
 		ServerLifecycleEvents.SERVER_STOPPED.register(server ->  {
 			LOGGER.info("TimelessLib Scheduler Stopped for Server");
 			TimelessLib.server = null;
 			serverScheduler = null;
 			serverCountdownManager = null;
+			serverCooldownManager = null;
 		});
 	}
 
@@ -52,5 +56,10 @@ public class TimelessLib implements ModInitializer {
 	public static CountdownManager<MinecraftServer> getServerCountdownManager() throws IllegalStateException {
 		if (serverCountdownManager == null) throw new IllegalStateException("Server Countdown Manager is null! This likely happened due to the server not being initialized.");
 		return serverCountdownManager;
+	}
+
+	public static ServerCooldownManager<MinecraftServer> getServerCooldownManager() throws IllegalStateException {
+		if (serverCooldownManager == null) throw new IllegalStateException("Server Cooldown Manager is null! This likely happened due to the server not being initialized.");
+		return serverCooldownManager;
 	}
 }

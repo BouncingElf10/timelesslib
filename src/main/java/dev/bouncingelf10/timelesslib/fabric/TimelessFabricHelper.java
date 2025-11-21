@@ -12,6 +12,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
+import java.util.UUID;
 
 public class TimelessFabricHelper {
     // ============ CLIENT ===========
@@ -27,10 +28,17 @@ public class TimelessFabricHelper {
                 prefix + TimeFormatter.format(nanosLeft, format) + suffix), false);
     }
 
-    @Nullable
+
     public static Minecraft getClient() {
         if (FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT) {
             return Minecraft.getInstance();
+        }
+        return null;
+    }
+
+    public static UUID getPlayerUuid() {
+        if (FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT) {
+            return Objects.requireNonNull(Objects.requireNonNull(getClient()).player).getUUID();
         }
         return null;
     }
