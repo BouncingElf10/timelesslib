@@ -1,6 +1,6 @@
 package dev.bouncingelf10.timelesslib;
 
-import dev.bouncingelf10.timelesslib.api.scheduler.CountdownManager;
+import dev.bouncingelf10.timelesslib.api.countdown.CountdownManager;
 import dev.bouncingelf10.timelesslib.api.scheduler.Scheduler;
 import net.fabricmc.api.ModInitializer;
 
