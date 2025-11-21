@@ -30,6 +30,16 @@ public class CountdownManager<T> {
         this.executor.setRemoveOnCancelPolicy(true);
     }
 
+    public Countdown start(Duration total) {
+        Objects.requireNonNull(total);
+        return start(total, Duration.ofMillis(10), TimelessClock.TimeSources.GAME_TIME);
+    }
+
+    public Countdown startRealtime(Duration total) {
+        Objects.requireNonNull(total);
+        return start(total, Duration.ofMillis(10), TimelessClock.TimeSources.REAL_TIME);
+    }
+
     public Countdown start(Duration total, Duration tickEvery, TimelessClock.TimeSource timeSource) {
         Objects.requireNonNull(total);
         Objects.requireNonNull(tickEvery);
@@ -63,7 +73,6 @@ public class CountdownManager<T> {
         private final TimelessClock.TimeSource timeSource;
         private final Duration total;
         private final long totalNanos;
-        private final Duration tickEvery;
         private final long tickNanos;
 
         private final AtomicBoolean cancelled = new AtomicBoolean(false);
@@ -83,7 +92,6 @@ public class CountdownManager<T> {
         Countdown(Duration total, Duration tickEvery, TimelessClock.TimeSource timeSource) {
             this.total = total;
             this.totalNanos = total.toNanos();
-            this.tickEvery = tickEvery;
             this.tickNanos = tickEvery.toNanos();
             this.timeSource = timeSource;
         }
