@@ -57,7 +57,7 @@ public class TimelessFabricHelper {
 
     public static void serverDisplayNearbyUsers(long nanosLeft, Vec3 pos, float radius) {
         if (FabricLoader.getInstance().getEnvironmentType() != EnvType.SERVER) return;
-        PlayerList list = TimelessLib.server.getPlayerList();
+        PlayerList list = TimelessLib.getServer().getPlayerList();
         for (ServerPlayer player : list.getPlayers()) {
             if (player.distanceToSqr(pos) <= radius * radius) {
                 serverDisplayToUser(nanosLeft, player);
@@ -67,7 +67,7 @@ public class TimelessFabricHelper {
 
     public static void serverDisplayNearbyUsers(long nanosLeft, Vec3 pos, float radius, TimeFormatter.TimeFormat format, String prefix, String suffix) {
         if (FabricLoader.getInstance().getEnvironmentType() != EnvType.SERVER) return;
-        PlayerList list = TimelessLib.server.getPlayerList();
+        PlayerList list = TimelessLib.getServer().getPlayerList();
         for (ServerPlayer player : list.getPlayers()) {
             if (player.distanceToSqr(pos) <= radius * radius) {
                 serverDisplayToUser(nanosLeft, player, format, prefix, suffix);
@@ -77,7 +77,7 @@ public class TimelessFabricHelper {
 
     public static void serverDisplayAllUsers(long nanosLeft) {
         if (FabricLoader.getInstance().getEnvironmentType() != EnvType.SERVER) return;
-        PlayerList list = TimelessLib.server.getPlayerList();
+        PlayerList list = TimelessLib.getServer().getPlayerList();
         for (ServerPlayer player : list.getPlayers()) {
             serverDisplayToUser(nanosLeft, player);
         }
@@ -85,7 +85,7 @@ public class TimelessFabricHelper {
 
     public static void serverDisplayAllUsers(long nanosLeft, TimeFormatter.TimeFormat format, String prefix, String suffix) {
         if (FabricLoader.getInstance().getEnvironmentType() != EnvType.SERVER) return;
-        PlayerList list = TimelessLib.server.getPlayerList();
+        PlayerList list = TimelessLib.getServer().getPlayerList();
         for (ServerPlayer player : list.getPlayers()) {
             serverDisplayToUser(nanosLeft, player, format, prefix, suffix);
         }

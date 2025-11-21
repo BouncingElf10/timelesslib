@@ -43,6 +43,11 @@ public class ClientCountdownManager<T> extends CountdownManager<T> {
             base.onThreshold(threshold, handler);
             return this;
         }
+        
+        public ClientCountdown every(Duration interval, java.util.function.Consumer<T> handler) {
+            base.every(interval, handler);
+            return this;
+        }
 
         public boolean pause() { return base.pause(); }
         public boolean resume() { return base.resume(); }
@@ -54,12 +59,12 @@ public class ClientCountdownManager<T> extends CountdownManager<T> {
 
         public ClientCountdown displayToUser() {
             TimelessFabricHelper.clientDisplayToUser(remaining().toNanos());
-            return this;
+            return every(Duration.ofMillis(10), context -> TimelessFabricHelper.clientDisplayToUser(remaining().toNanos()));
         }
 
         public ClientCountdown displayToUser(TimeFormatter.TimeFormat format, String prefix, String suffix) {
             TimelessFabricHelper.clientDisplayToUser(remaining().toNanos(), format, prefix, suffix);
-            return this;
+            return every(Duration.ofMillis(10), context -> TimelessFabricHelper.clientDisplayToUser(remaining().toNanos(), format, prefix, suffix));
         }
     }
 }
