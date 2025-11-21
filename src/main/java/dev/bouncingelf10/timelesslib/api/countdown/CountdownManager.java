@@ -185,7 +185,6 @@ public class CountdownManager<T> {
             if (cancelled.get()) return false;
             boolean ok = paused.compareAndSet(false, true);
             if (!ok) return false;
-            // cancel scheduled tick and store remaining
             ScheduledFuture<?> f = future;
             if (f != null && !f.isDone()) f.cancel(false);
             long now = timeSource.now();
