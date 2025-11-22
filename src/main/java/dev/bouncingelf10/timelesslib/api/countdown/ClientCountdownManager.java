@@ -64,17 +64,16 @@ public class ClientCountdownManager<T> extends CountdownManager<T> {
         public boolean cancel() { return base.cancel(); }
         public boolean isPaused() { return base.isPaused(); }
         public boolean isCancelled() { return base.isCancelled(); }
+        public boolean isFinished() { return base.isFinished(); }
         public Duration remaining() { return base.remaining(); }
         public String id() { return base.id(); }
 
         public ClientCountdown displayToUser() {
-            TimelessFabricHelper.clientDisplayToUser(remaining().toNanos());
-            return every(Duration.ofMillis(10), context -> TimelessFabricHelper.clientDisplayToUser(remaining().toNanos()));
+            return every(Duration.ofMillis(10), client -> TimelessFabricHelper.clientDisplayToUser(remaining().toNanos()));
         }
 
         public ClientCountdown displayToUser(TimeFormatter.TimeFormat format, String prefix, String suffix) {
-            TimelessFabricHelper.clientDisplayToUser(remaining().toNanos(), format, prefix, suffix);
-            return every(Duration.ofMillis(10), context -> TimelessFabricHelper.clientDisplayToUser(remaining().toNanos(), format, prefix, suffix));
+            return every(Duration.ofMillis(10), client -> TimelessFabricHelper.clientDisplayToUser(remaining().toNanos(), format, prefix, suffix));
         }
     }
 }

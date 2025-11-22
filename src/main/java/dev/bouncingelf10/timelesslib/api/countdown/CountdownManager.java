@@ -16,19 +16,12 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/**
- * CountdownManager schedules countdowns using a ScheduledThreadPoolExecutor for timing precision,
- * but dispatches all countdown logic and handlers onto the main thread using a supplied dispatcher.
- *
- * T: the context object (e.g. MinecraftServer). The dispatcher must accept (context, runnable)
- * and run the runnable on the main thread for that context.
- */
 public class CountdownManager<T> {
     private final ScheduledThreadPoolExecutor executor;
     private final Map<String, Countdown> active = new ConcurrentHashMap<>();
     private final Supplier<T> contextProvider;
     private final BiConsumer<T, Runnable> mainThreadDispatcher;
-    
+
     public CountdownManager(Supplier<T> contextProvider, BiConsumer<T, Runnable> mainThreadDispatcher) {
         this(contextProvider, mainThreadDispatcher, Math.max(1, Runtime.getRuntime().availableProcessors()));
     }
@@ -210,9 +203,7 @@ public class CountdownManager<T> {
                 }
             }
 
-            // finished?
             if (remaining == 0L) {
-                // mark finished and run onFinish handlers on main thread
                 if (finished.compareAndSet(false, true)) {
                     try {
                         for (Consumer<T> f : onFinish) {
@@ -308,27 +299,27 @@ public class CountdownManager<T> {
         }
 
         public Countdown displayToUser(ServerPlayer player) {
-            return every(Duration.ofMillis(50), server -> TimelessFabricHelper.serverDisplayToUser(remaining().toNanos(), player));
+            return every(Duration.ofMillis(10), server -> TimelessFabricHelper.serverDisplayToUser(remaining().toNanos(), player));
         }
 
         public Countdown displayToUser(ServerPlayer player, TimeFormatter.TimeFormat timeFormat, String prefix, String suffix) {
-            return every(Duration.ofMillis(50), server -> TimelessFabricHelper.serverDisplayToUser(remaining().toNanos(), player, timeFormat, prefix, suffix));
+            return every(Duration.ofMillis(10), server -> TimelessFabricHelper.serverDisplayToUser(remaining().toNanos(), player, timeFormat, prefix, suffix));
         }
 
         public Countdown displayAllUsers() {
-            return every(Duration.ofMillis(50), server -> TimelessFabricHelper.serverDisplayAllUsers(remaining().toNanos()));
+            return every(Duration.ofMillis(10), server -> TimelessFabricHelper.serverDisplayAllUsers(remaining().toNanos()));
         }
 
         public Countdown displayAllUsers(TimeFormatter.TimeFormat timeFormat, String prefix, String suffix) {
-            return every(Duration.ofMillis(50), server -> TimelessFabricHelper.serverDisplayAllUsers(remaining().toNanos(), timeFormat, prefix, suffix));
+            return every(Duration.ofMillis(10), server -> TimelessFabricHelper.serverDisplayAllUsers(remaining().toNanos(), timeFormat, prefix, suffix));
         }
 
         public Countdown displayNearbyUsers(Vec3 pos, float radius) {
-            return every(Duration.ofMillis(50), server -> TimelessFabricHelper.serverDisplayNearbyUsers(remaining().toNanos(), pos, radius));
+            return every(Duration.ofMillis(10), server -> TimelessFabricHelper.serverDisplayNearbyUsers(remaining().toNanos(), pos, radius));
         }
 
         public Countdown displayNearbyUsers(Vec3 pos, float radius, TimeFormatter.TimeFormat timeFormat, String prefix, String suffix) {
-            return every(Duration.ofMillis(50), server -> TimelessFabricHelper.serverDisplayNearbyUsers(remaining().toNanos(), pos, radius, timeFormat, prefix, suffix));
+            return every(Duration.ofMillis(10), server -> TimelessFabricHelper.serverDisplayNearbyUsers(remaining().toNanos(), pos, radius, timeFormat, prefix, suffix));
         }
 
         public Countdown displayNearbyUsers(ServerPlayer player, float radius) {
