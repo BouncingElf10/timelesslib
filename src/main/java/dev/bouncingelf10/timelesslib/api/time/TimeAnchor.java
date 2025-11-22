@@ -1,12 +1,13 @@
 package dev.bouncingelf10.timelesslib.api.time;
 
 import dev.bouncingelf10.timelesslib.TimelessClock;
+import java.util.Objects;
 
 public class TimeAnchor {
+
     private long startNano;
     private long accumulatedNanos;
-    private long pausedAtNanos;
-    private boolean isPaused;
+    private boolean paused;
     private final TimelessClock.TimeSource timeSource;
 
     public TimeAnchor() {
@@ -14,22 +15,18 @@ public class TimeAnchor {
     }
 
     public TimeAnchor(TimelessClock.TimeSource timeSource) {
-        this.timeSource = timeSource;
-        this.startNano = getCurrentTime();
+        this.timeSource = Objects.requireNonNull(timeSource, "TimeSource cannot be null");
+        this.startNano = timeSource.now();
         this.accumulatedNanos = 0;
-        this.pausedAtNanos = 0;
-        this.isPaused = false;
+        this.paused = false;
     }
 
-    private long getCurrentTime() {
+    private long currentNano() {
         return timeSource.now();
     }
 
     public long elapsedNanos() {
-        if (isPaused) {
-            return accumulatedNanos;
-        }
-        return accumulatedNanos + (getCurrentTime() - startNano);
+        return paused ? accumulatedNanos : accumulatedNanos + (currentNano() - startNano);
     }
 
     public Duration elapsed() {
@@ -40,21 +37,10 @@ public class TimeAnchor {
         return unit.from(elapsedNanos());
     }
 
-    public int elapsedTicks() {
-        return (int) elapsed(DurationUnit.TICKS);
-    }
-
-    public double elapsedMillis() {
-        return elapsed(DurationUnit.MILLISECONDS);
-    }
-
-    public double elapsedSeconds() {
-        return elapsed(DurationUnit.SECONDS);
-    }
-
-    public double elapsedMinutes() {
-        return elapsed(DurationUnit.MINUTES);
-    }
+    public long elapsedTicks() { return (long) elapsed(DurationUnit.TICKS); }
+    public double elapsedMillis() { return elapsed(DurationUnit.MILLISECONDS); }
+    public double elapsedSeconds() { return elapsed(DurationUnit.SECONDS); }
+    public double elapsedMinutes() { return elapsed(DurationUnit.MINUTES); }
 
     public boolean hasElapsed(Duration duration) {
         return elapsedNanos() >= duration.toNanos();
@@ -73,9 +59,7 @@ public class TimeAnchor {
     }
 
     public Duration remaining(Duration target) {
-        long targetNanos = target.toNanos();
-        long elapsed = elapsedNanos();
-        return Duration.ofNanos(Math.max(0, targetNanos - elapsed));
+        return Duration.ofNanos(Math.max(0, target.toNanos() - elapsedNanos()));
     }
 
     public long remaining(long amount, DurationUnit unit) {
@@ -87,34 +71,27 @@ public class TimeAnchor {
     }
 
     public void pause() {
-        if (!isPaused) {
-            accumulatedNanos += getCurrentTime() - startNano;
-            pausedAtNanos = getCurrentTime();
-            isPaused = true;
+        if (!paused) {
+            accumulatedNanos += currentNano() - startNano;
+            paused = true;
         }
     }
 
     public void resume() {
-        if (isPaused) {
-            startNano = getCurrentTime();
-            isPaused = false;
-            pausedAtNanos = 0;
+        if (paused) {
+            startNano = currentNano();
+            paused = false;
         }
     }
 
     public boolean isPaused() {
-        return isPaused;
-    }
-
-    public TimelessClock.TimeSource getTimeSource() {
-        return timeSource;
+        return paused;
     }
 
     public void reset() {
-        this.startNano = getCurrentTime();
-        this.accumulatedNanos = 0;
-        this.pausedAtNanos = 0;
-        this.isPaused = false;
+        startNano = currentNano();
+        accumulatedNanos = 0;
+        paused = false;
     }
 
     public void resetAndPause() {
@@ -126,18 +103,12 @@ public class TimeAnchor {
         return Duration.ofNanos(elapsedNanos());
     }
 
-    public Duration sinceSnapshot(Duration previousSnapshot) {
-        return elapsed().minus(previousSnapshot);
+    public Duration elapsedSince(Duration snapshot) {
+        return elapsed().minus(snapshot);
     }
 
-    @Deprecated
-    public long snapshotNanos() {
-        return elapsedNanos();
-    }
-
-    @Deprecated
-    public long sinceSnapshotNanos(long previousSnapshot) {
-        return elapsedNanos() - previousSnapshot;
+    public TimelessClock.TimeSource getTimeSource() {
+        return timeSource;
     }
 
     @Override
@@ -149,7 +120,7 @@ public class TimeAnchor {
         return TimeFormatter.format(elapsedNanos(), format);
     }
 
-    public static TimeAnchor create() {
+    public static TimeAnchor createGameTime() {
         return new TimeAnchor(TimelessClock.TimeSources.GAME_TIME);
     }
 
