@@ -69,11 +69,11 @@ public class ClientCountdownManager<T> extends CountdownManager<T> {
         public String id() { return base.id(); }
 
         public ClientCountdown displayToUser() {
-            return every(Duration.ofMillis(10), client -> TimelessFabricHelper.clientDisplayToUser(remaining().toNanos()));
+            return every(Duration.TICK, client -> TimelessFabricHelper.clientDisplayToUser(remaining().toNanos()));
         }
 
         public ClientCountdown displayToUser(TimeFormatter.TimeFormat format, String prefix, String suffix) {
-            return every(Duration.ofMillis(10), client -> TimelessFabricHelper.clientDisplayToUser(remaining().toNanos(), format, prefix, suffix));
+            return every(Duration.TICK, client -> TimelessFabricHelper.clientDisplayToUser(remaining().toNanos(), format, prefix, suffix));
         }
     }
 }
