@@ -4,6 +4,16 @@ import java.math.RoundingMode;
 
 public final class Duration implements Comparable<Duration> {
     public static final Duration ZERO = new Duration(0);
+    public static final Duration DEFAULT_TICK = Duration.ofMillis(50);
+    public static final Duration MINECRAFT_DAY = Duration.ofTicks(24000);
+    public static final Duration MINECRAFT_HOUR = Duration.ofTicks(1000);
+    public static final Duration MINECRAFT_MINUTE = Duration.ofTicks((long) (1000.0 / 60.0));
+
+    public static final Duration TICK = Duration.ofTicks(1);
+    public static final Duration SECOND = Duration.ofSeconds(1);
+    public static final Duration MINUTE = Duration.ofMinutes(1);
+    public static final Duration HOUR = Duration.ofHours(1);
+    public static final Duration DAY = Duration.ofDays(1);
     private final long nanos;
 
     private Duration(long nanos) {

@@ -179,7 +179,6 @@ public class CountdownManager<T> {
                     long interval = e.getKey();
                     long nextToFire = nextElapsedToFire.getOrDefault(interval, interval);
                     while (elapsed >= nextToFire) {
-                        // fire handlers for that interval
                         for (Consumer<T> h : e.getValue()) {
                             try { h.accept(ctx); } catch (Throwable t) { t.printStackTrace(); }
                         }
@@ -220,38 +219,30 @@ public class CountdownManager<T> {
         }
 
         public boolean cancel() {
-            boolean prev = cancelled.getAndSet(true);
-            if (prev) return false;
-            ScheduledFuture<?> f = future;
-            if (f != null) f.cancel(false);
+            if (cancelled.getAndSet(true)) return false;
+            if (future != null) future.cancel(false);
             active.remove(id);
             return true;
         }
 
         private void cancelSilently() {
             cancelled.set(true);
-            ScheduledFuture<?> f = future;
-            if (f != null) f.cancel(false);
+            if (future != null) future.cancel(false);
         }
 
         public boolean pause() {
             if (cancelled.get() || finished.get()) return false;
-            boolean ok = paused.compareAndSet(false, true);
-            if (!ok) return false;
-            ScheduledFuture<?> f = future;
-            if (f != null && !f.isDone()) f.cancel(false);
-            long now = timeSource.now();
-            remainingOnPause = Math.max(0L, endTimeNanos - now);
+            if (!paused.compareAndSet(false, true)) return false;
+            if (future != null && !future.isDone()) future.cancel(false);
+            remainingOnPause = Math.max(0L, endTimeNanos - timeSource.now());
             return true;
         }
 
         public boolean resume() {
             if (cancelled.get() || finished.get()) return false;
-            boolean ok = paused.compareAndSet(true, false);
-            if (!ok) return false;
-            long now = timeSource.now();
+            if (!paused.compareAndSet(true, false)) return false;
             if (remainingOnPause < 0) remainingOnPause = 0;
-            endTimeNanos = now + remainingOnPause;
+            endTimeNanos = timeSource.now() + remainingOnPause;
             remainingOnPause = -1;
             scheduleNextTick();
             return true;
@@ -263,8 +254,7 @@ public class CountdownManager<T> {
 
         public Duration remaining() {
             if (paused.get() && remainingOnPause >= 0) return Duration.ofNanos(remainingOnPause);
-            long now = timeSource.now();
-            return Duration.ofNanos(Math.max(0L, endTimeNanos - now));
+            return Duration.ofNanos(Math.max(0L, endTimeNanos - timeSource.now()));
         }
 
         public String id() { return id; }
@@ -284,8 +274,7 @@ public class CountdownManager<T> {
         public Countdown onThreshold(Duration threshold, Consumer<T> handler) {
             Objects.requireNonNull(threshold);
             Objects.requireNonNull(handler);
-            long n = threshold.toNanos();
-            thresholds.computeIfAbsent(n, k -> Collections.synchronizedList(new ArrayList<>())).add(handler);
+            thresholds.computeIfAbsent(threshold.toNanos(), k -> Collections.synchronizedList(new ArrayList<>())).add(handler);
             return this;
         }
 
@@ -299,27 +288,27 @@ public class CountdownManager<T> {
         }
 
         public Countdown displayToUser(ServerPlayer player) {
-            return every(Duration.ofMillis(10), server -> TimelessFabricHelper.serverDisplayToUser(remaining().toNanos(), player));
+            return every(Duration.TICK, server -> TimelessFabricHelper.serverDisplayToUser(remaining().toNanos(), player));
         }
 
         public Countdown displayToUser(ServerPlayer player, TimeFormatter.TimeFormat timeFormat, String prefix, String suffix) {
-            return every(Duration.ofMillis(10), server -> TimelessFabricHelper.serverDisplayToUser(remaining().toNanos(), player, timeFormat, prefix, suffix));
+            return every(Duration.TICK, server -> TimelessFabricHelper.serverDisplayToUser(remaining().toNanos(), player, timeFormat, prefix, suffix));
         }
 
         public Countdown displayAllUsers() {
-            return every(Duration.ofMillis(10), server -> TimelessFabricHelper.serverDisplayAllUsers(remaining().toNanos()));
+            return every(Duration.TICK, server -> TimelessFabricHelper.serverDisplayAllUsers(remaining().toNanos()));
         }
 
         public Countdown displayAllUsers(TimeFormatter.TimeFormat timeFormat, String prefix, String suffix) {
-            return every(Duration.ofMillis(10), server -> TimelessFabricHelper.serverDisplayAllUsers(remaining().toNanos(), timeFormat, prefix, suffix));
+            return every(Duration.TICK, server -> TimelessFabricHelper.serverDisplayAllUsers(remaining().toNanos(), timeFormat, prefix, suffix));
         }
 
         public Countdown displayNearbyUsers(Vec3 pos, float radius) {
-            return every(Duration.ofMillis(10), server -> TimelessFabricHelper.serverDisplayNearbyUsers(remaining().toNanos(), pos, radius));
+            return every(Duration.TICK, server -> TimelessFabricHelper.serverDisplayNearbyUsers(remaining().toNanos(), pos, radius));
         }
 
         public Countdown displayNearbyUsers(Vec3 pos, float radius, TimeFormatter.TimeFormat timeFormat, String prefix, String suffix) {
-            return every(Duration.ofMillis(10), server -> TimelessFabricHelper.serverDisplayNearbyUsers(remaining().toNanos(), pos, radius, timeFormat, prefix, suffix));
+            return every(Duration.TICK, server -> TimelessFabricHelper.serverDisplayNearbyUsers(remaining().toNanos(), pos, radius, timeFormat, prefix, suffix));
         }
 
         public Countdown displayNearbyUsers(ServerPlayer player, float radius) {

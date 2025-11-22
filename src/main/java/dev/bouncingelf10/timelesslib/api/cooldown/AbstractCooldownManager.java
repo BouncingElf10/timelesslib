@@ -4,6 +4,7 @@ import dev.bouncingelf10.timelesslib.TimelessClock;
 import dev.bouncingelf10.timelesslib.api.countdown.CountdownManager;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,39 +31,33 @@ public abstract class AbstractCooldownManager<T> extends CountdownManager<T> {
         return startCooldown(owner, key, duration, TimelessClock.TimeSources.REAL_TIME);
     }
 
-    private Countdown startCooldown(UUID owner, String key, Duration duration, TimelessClock.TimeSource timeSource) {
+    public Countdown startIfAbsent(UUID owner, String key, Duration duration) {
         owner = normalizeOwner(owner);
-        reset(owner, key);
-
-        Countdown cd = start(duration, Duration.ofMillis(10), timeSource);
-
+        Map<String, Countdown> ownerMap = active.computeIfAbsent(owner, o -> new ConcurrentHashMap<>());
         UUID finalOwner = owner;
-        cd.onFinish(ctx -> reset(finalOwner, key));
-
-        active.computeIfAbsent(owner, o -> new ConcurrentHashMap<>()).put(key, cd);
-
-        return cd;
+        return ownerMap.computeIfAbsent(key, k -> startCooldownInternal(finalOwner, key, duration, TimelessClock.TimeSources.GAME_TIME));
     }
 
     public boolean isReady(UUID owner, String key) {
         owner = normalizeOwner(owner);
-        return !active.containsKey(owner) || !active.get(owner).containsKey(key);
+        Map<String, Countdown> map = active.get(owner);
+        return map == null || !map.containsKey(key);
     }
 
     public Duration remaining(UUID owner, String key) {
         owner = normalizeOwner(owner);
-        CountdownManager<T>.Countdown cd = active.getOrDefault(owner, Map.of()).get(key);
-        return cd == null ? Duration.zero() : cd.remaining();
+        Countdown countdown = active.getOrDefault(owner, Collections.emptyMap()).get(key);
+        return countdown == null ? Duration.zero() : countdown.remaining();
     }
 
     public void reset(UUID owner, String key) {
         owner = normalizeOwner(owner);
-
-        Countdown cd = active
-                .getOrDefault(owner, Map.of())
-                .remove(key);
-
-        if (cd != null) cd.cancel();
+        Map<String, Countdown> map = active.get(owner);
+        if (map != null) {
+            Countdown countdown = map.remove(key);
+            if (countdown != null) countdown.cancel();
+            if (map.isEmpty()) active.remove(owner);
+        }
     }
 
     public void resetAll(UUID owner) {
@@ -72,5 +67,23 @@ public abstract class AbstractCooldownManager<T> extends CountdownManager<T> {
             map.values().forEach(Countdown::cancel);
         }
     }
-}
 
+    private Countdown startCooldown(UUID owner, String key, Duration duration, TimelessClock.TimeSource timeSource) {
+        owner = normalizeOwner(owner);
+        reset(owner, key);
+        return startCooldownInternal(owner, key, duration, timeSource);
+    }
+
+    private Countdown startCooldownInternal(UUID owner, String key, Duration duration, TimelessClock.TimeSource timeSource) {
+        Countdown countdown = start(duration, Duration.TICK, timeSource);
+        countdown.onFinish(ctx -> {
+            Map<String, Countdown> map = active.get(owner);
+            if (map != null) {
+                map.remove(key);
+                if (map.isEmpty()) active.remove(owner);
+            }
+        });
+        active.computeIfAbsent(owner, o -> new ConcurrentHashMap<>()).put(key, countdown);
+        return countdown;
+    }
+}

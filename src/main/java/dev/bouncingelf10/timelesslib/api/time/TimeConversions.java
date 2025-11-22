@@ -84,12 +84,4 @@ public final class TimeConversions {
     public static double millisPerTick() { return 50.0; }
     public static int ticksPerSecond() { return 20; }
     public static Duration ticks(long ticks) { return Duration.ofTicks(ticks); }
-    public static Duration minecraftDay() { return Duration.ofTicks(24000); }
-    public static Duration minecraftHour() { return Duration.ofTicks(1000); }
-    public static Duration minecraftMinute() { return Duration.ofTicks((long) (1000.0 / 60.0)); }
-
-    public static Duration oneSecond() { return Duration.ofSeconds(1); }
-    public static Duration oneMinute() { return Duration.ofMinutes(1); }
-    public static Duration oneHour() { return Duration.ofHours(1); }
-    public static Duration oneDay() { return Duration.ofDays(1); }
 }
