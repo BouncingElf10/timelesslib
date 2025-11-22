@@ -34,7 +34,7 @@ public abstract class AbstractCooldownManager<T> extends CountdownManager<T> {
         owner = normalizeOwner(owner);
         reset(owner, key);
 
-        Countdown cd = start(duration, Duration.ofMillis(1), timeSource);
+        Countdown cd = start(duration, Duration.ofMillis(10), timeSource);
 
         UUID finalOwner = owner;
         cd.onFinish(ctx -> reset(finalOwner, key));
