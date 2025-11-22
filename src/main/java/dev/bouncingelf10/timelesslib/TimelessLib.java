@@ -3,6 +3,8 @@ package dev.bouncingelf10.timelesslib;
 import dev.bouncingelf10.timelesslib.api.cooldown.ServerCooldownManager;
 import dev.bouncingelf10.timelesslib.api.countdown.CountdownManager;
 import dev.bouncingelf10.timelesslib.api.scheduler.Scheduler;
+import dev.bouncingelf10.timelesslib.api.time.Duration;
+import dev.bouncingelf10.timelesslib.api.time.TimeFormatter;
 import dev.bouncingelf10.timelesslib.fabric.TimelessFabricHelper;
 import net.fabricmc.api.ModInitializer;
 
@@ -25,14 +27,14 @@ public class TimelessLib implements ModInitializer {
 		LOGGER.info("TimelessLib Sever Initialising");
 
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
-			LOGGER.info("TimelessLib Scheduler Initialised for Server");
+			LOGGER.info("TimelessLib Initialised for Server");
 			TimelessLib.server = server;
 			serverScheduler = new Scheduler<>(() -> server);
 			serverCountdownManager = new CountdownManager<>(() -> server);
 			serverCooldownManager = new ServerCooldownManager<>(() -> server);
 		});
 		ServerLifecycleEvents.SERVER_STOPPED.register(server ->  {
-			LOGGER.info("TimelessLib Scheduler Stopped for Server");
+			LOGGER.info("TimelessLib Stopped for Server");
 			TimelessLib.server = null;
 			serverScheduler = null;
 			serverCountdownManager = null;
@@ -41,30 +43,26 @@ public class TimelessLib implements ModInitializer {
 	}
 
 	public static boolean isServerInitialized() {
-		return serverScheduler != null;
+		return server != null;
 	}
 
 	public static MinecraftServer getServer() throws IllegalStateException {
-		if (TimelessFabricHelper.isClient()) throw new IllegalStateException("You are calling a server function on client code!");
-		if (server == null) throw new IllegalStateException("Server is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
+        if (server == null) throw new IllegalStateException("Server is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
 		return server;
 	}
 
 	public static Scheduler<MinecraftServer> getServerScheduler() throws IllegalStateException {
-		if (TimelessFabricHelper.isClient()) throw new IllegalStateException("You are calling a server function on client code!");
-		if (serverScheduler == null) throw new IllegalStateException("Server Scheduler is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
+        if (serverScheduler == null) throw new IllegalStateException("Server Scheduler is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
 		return serverScheduler;
 	}
 
 	public static CountdownManager<MinecraftServer> getServerCountdownManager() throws IllegalStateException {
-		if (TimelessFabricHelper.isClient()) throw new IllegalStateException("You are calling a server function on client code!");
-		if (serverCountdownManager == null) throw new IllegalStateException("Server Countdown Manager is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
+        if (serverCountdownManager == null) throw new IllegalStateException("Server Countdown Manager is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
 		return serverCountdownManager;
 	}
 
 	public static ServerCooldownManager<MinecraftServer> getServerCooldownManager() throws IllegalStateException {
-		if (TimelessFabricHelper.isClient()) throw new IllegalStateException("You are calling a server function on client code!");
-		if (serverCooldownManager == null) throw new IllegalStateException("Server Cooldown Manager is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
+        if (serverCooldownManager == null) throw new IllegalStateException("Server Cooldown Manager is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
 		return serverCooldownManager;
 	}
 }
