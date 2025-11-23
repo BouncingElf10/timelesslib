@@ -23,7 +23,7 @@ public class TimelessLibClient implements ClientModInitializer {
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> TimelessClock.update());
         ClientTickEvents.END_CLIENT_TICK.register(client -> clientKeyframeManager.update(TimelessClock.deltaSeconds()));
-	}
+    }
 
 	public static Scheduler<Minecraft> getClientScheduler() {
 		return clientScheduler;
