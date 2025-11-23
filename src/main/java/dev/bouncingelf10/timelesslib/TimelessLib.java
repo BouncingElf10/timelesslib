@@ -38,6 +38,7 @@ public class TimelessLib implements ModInitializer {
 			serverCooldownManager = new ServerCooldownManager<>(() -> server);
             serverKeyframeManager = new KeyframeManager();
 		});
+
 		ServerLifecycleEvents.SERVER_STOPPED.register(server ->  {
 			LOGGER.info("TimelessLib Stopped for Server");
 			TimelessLib.server = null;
