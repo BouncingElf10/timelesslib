@@ -29,101 +29,91 @@ public final class TimeFormatter {
     }
 
     public static String formatCompact(long nanos, DurationUnit minUnit) {
-        TimeComponents tc = new TimeComponents(nanos);
-        StringBuilder sb = new StringBuilder();
+        TimeComponents components = new TimeComponents(nanos);
+        StringBuilder output = new StringBuilder();
 
-        if (tc.days > 0) sb.append(tc.days).append("d ");
-        if (tc.hours > 0) sb.append(tc.hours).append("h ");
-        if (tc.minutes > 0) sb.append(tc.minutes).append("m ");
-        if (tc.seconds > 0) sb.append(tc.seconds).append("s ");
-        if (tc.millis > 0) sb.append(tc.millis).append("ms ");
+        if (components.days > 0) output.append(components.days).append("d ");
+        if (components.hours > 0) output.append(components.hours).append("h ");
+        if (components.minutes > 0) output.append(components.minutes).append("m ");
+        if (components.seconds > 0) output.append(components.seconds).append("s ");
+        if (components.millis > 0) output.append(components.millis).append("ms ");
 
-        if (sb.isEmpty()) {
-            sb.append("0").append(getUnitSuffix(minUnit));
+        if (output.isEmpty()) {
+            output.append("0").append(getUnitSuffix(minUnit));
         }
 
-        return sb.toString().trim();
+        return output.toString().trim();
     }
 
     public static String formatVerbose(long nanos, String conjunction) {
-        TimeComponents tc = new TimeComponents(nanos);
-        List<String> parts = new ArrayList<>();
+        TimeComponents components = new TimeComponents(nanos);
+        List<String> timeParts = new ArrayList<>();
 
-        if (tc.days > 0) parts.add(tc.days + (tc.days == 1 ? " day" : " days"));
-        if (tc.hours > 0) parts.add(tc.hours + (tc.hours == 1 ? " hour" : " hours"));
-        if (tc.minutes > 0) parts.add(tc.minutes + (tc.minutes == 1 ? " minute" : " minutes"));
-        if (tc.seconds > 0) parts.add(tc.seconds + (tc.seconds == 1 ? " second" : " seconds"));
-        if (parts.isEmpty()) return "0 seconds";
+        if (components.days > 0) timeParts.add(components.days + (components.days == 1 ? " day" : " days"));
+        if (components.hours > 0) timeParts.add(components.hours + (components.hours == 1 ? " hour" : " hours"));
+        if (components.minutes > 0) timeParts.add(components.minutes + (components.minutes == 1 ? " minute" : " minutes"));
+        if (components.seconds > 0) timeParts.add(components.seconds + (components.seconds == 1 ? " second" : " seconds"));
 
-        if (parts.size() == 1) return parts.getFirst();
+        if (timeParts.isEmpty()) return "0 seconds";
+        if (timeParts.size() == 1) return timeParts.get(0);
 
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < parts.size(); i++) {
+        StringBuilder output = new StringBuilder();
+        for (int i = 0; i < timeParts.size(); i++) {
             if (i > 0) {
-                if (i == parts.size() - 1 && !conjunction.isEmpty()) {
-                    sb.append(" ").append(conjunction).append(" ");
+                if (i == timeParts.size() - 1 && !conjunction.isEmpty()) {
+                    output.append(" ").append(conjunction).append(" ");
                 } else {
-                    sb.append(", ");
+                    output.append(", ");
                 }
             }
-            sb.append(parts.get(i));
+            output.append(timeParts.get(i));
         }
 
-        return sb.toString();
+        return output.toString();
     }
 
     public static String formatDigital(long nanos, boolean includeMillis) {
-        TimeComponents tc = new TimeComponents(nanos);
+        TimeComponents components = new TimeComponents(nanos);
 
-        if (tc.days > 0) {
+        if (components.days > 0) {
             return includeMillis
-                    ? String.format("%dd %02d:%02d:%02d.%03d", tc.days, tc.hours, tc.minutes, tc.seconds, tc.millis)
-                    : String.format("%dd %02d:%02d:%02d", tc.days, tc.hours, tc.minutes, tc.seconds);
+                    ? String.format("%dd %02d:%02d:%02d.%03d", components.days, components.hours, components.minutes, components.seconds, components.millis)
+                    : String.format("%dd %02d:%02d:%02d", components.days, components.hours, components.minutes, components.seconds);
         }
-        if (tc.hours > 0) {
+        if (components.hours > 0) {
             return includeMillis
-                    ? String.format("%02d:%02d:%02d.%03d", tc.hours, tc.minutes, tc.seconds, tc.millis)
-                    : String.format("%02d:%02d:%02d", tc.hours, tc.minutes, tc.seconds);
+                    ? String.format("%02d:%02d:%02d.%03d", components.hours, components.minutes, components.seconds, components.millis)
+                    : String.format("%02d:%02d:%02d", components.hours, components.minutes, components.seconds);
         }
         return includeMillis
-                ? String.format("%02d:%02d.%03d", tc.minutes, tc.seconds, tc.millis)
-                : String.format("%02d:%02d", tc.minutes, tc.seconds);
+                ? String.format("%02d:%02d.%03d", components.minutes, components.seconds, components.millis)
+                : String.format("%02d:%02d", components.minutes, components.seconds);
     }
 
     public static String formatISO8601(long nanos) {
-        TimeComponents tc = new TimeComponents(nanos);
-        long days = tc.days;
+        TimeComponents components = new TimeComponents(nanos);
 
-        long hours = tc.hours;
-        long minutes = tc.minutes;
-        long seconds = tc.seconds;
-        long millis = tc.millis;
+        StringBuilder isoOutput = new StringBuilder("P");
+        if (components.days > 0) isoOutput.append(components.days).append("D");
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("P");
-
-        if (days > 0) sb.append(days).append("D");
-
-        boolean hasTime = hours > 0 || minutes > 0 || seconds > 0 || millis > 0;
-
+        boolean hasTime = components.hours > 0 || components.minutes > 0 || components.seconds > 0 || components.millis > 0;
         if (hasTime) {
-            sb.append("T");
-            if (hours > 0) sb.append(hours).append("H");
-            if (minutes > 0) sb.append(minutes).append("M");
-
-            if (millis > 0) {
-                sb.append(seconds).append(".");
-                sb.append(String.format("%03d", millis)).append("S");
-            } else if (seconds > 0) {
-                sb.append(seconds).append("S");
+            isoOutput.append("T");
+            if (components.hours > 0) isoOutput.append(components.hours).append("H");
+            if (components.minutes > 0) isoOutput.append(components.minutes).append("M");
+            if (components.millis > 0) {
+                isoOutput.append(components.seconds).append(".");
+                isoOutput.append(String.format("%03d", components.millis)).append("S");
+            } else if (components.seconds > 0) {
+                isoOutput.append(components.seconds).append("S");
             }
         }
 
-        if (!hasTime && days == 0) {
-            sb.append("T0S");
+        if (!hasTime && components.days == 0) {
+            isoOutput.append("T0S");
         }
 
-        return sb.toString();
+        return isoOutput.toString();
     }
 
     private static String getUnitSuffix(DurationUnit unit) {
@@ -150,12 +140,12 @@ public final class TimeFormatter {
             long totalSeconds = nanos / 1_000_000_000L;
             this.days = totalSeconds / 86400L;
 
-            long leftover = totalSeconds % 86400L;
-            this.hours = (int) (leftover / 3600L);
-            leftover %= 3600L;
+            long remainingSeconds = totalSeconds % 86400L;
+            this.hours = (int) (remainingSeconds / 3600L);
+            remainingSeconds %= 3600L;
 
-            this.minutes = (int) (leftover / 60L);
-            this.seconds = (int) (leftover % 60L);
+            this.minutes = (int) (remainingSeconds / 60L);
+            this.seconds = (int) (remainingSeconds % 60L);
             this.millis = (int) ((nanos % 1_000_000_000L) / 1_000_000L);
         }
     }
@@ -166,80 +156,72 @@ public final class TimeFormatter {
                 return formatCompact(nanos, DurationUnit.SECONDS);
             }
         },
-
         COMPACT_MILLIS {
             @Override public String apply(long nanos) {
                 return formatCompact(nanos, DurationUnit.MILLISECONDS);
             }
         },
-
         VERBOSE {
             @Override public String apply(long nanos) {
                 return formatVerbose(nanos, "and");
             }
         },
-
         VERBOSE_SIMPLE {
             @Override public String apply(long nanos) {
                 return formatVerbose(nanos, "");
             }
         },
-
         DIGITAL {
             @Override public String apply(long nanos) {
                 return formatDigital(nanos, false);
             }
         },
-
         DIGITAL_MILLIS {
             @Override public String apply(long nanos) {
                 return formatDigital(nanos, true);
             }
         },
-
         MINIMAL {
             @Override public String apply(long nanos) {
-                TimeComponents tc = new TimeComponents(nanos);
-                if (tc.days > 0) return tc.days + "d";
-                if (tc.hours > 0) return tc.hours + "h";
-                if (tc.minutes > 0) return tc.minutes + "m";
-                if (tc.seconds > 0) return tc.seconds + "s";
-                return tc.millis + "ms";
+                TimeComponents components = new TimeComponents(nanos);
+                if (components.days > 0) return components.days + "d";
+                if (components.hours > 0) return components.hours + "h";
+                if (components.minutes > 0) return components.minutes + "m";
+                if (components.seconds > 0) return components.seconds + "s";
+                return components.millis + "ms";
             }
         },
-
         MINIMAL_TWO {
             @Override public String apply(long nanos) {
-                TimeComponents tc = new TimeComponents(nanos);
-                List<String> parts = new ArrayList<>();
+                TimeComponents components = new TimeComponents(nanos);
+                List<String> firstTwoParts = new ArrayList<>();
 
-                if (tc.days > 0) parts.add(tc.days + "d");
-                if (tc.hours > 0) parts.add(tc.hours + "h");
-                if (tc.minutes > 0) parts.add(tc.minutes + "m");
-                if (tc.seconds > 0) parts.add(tc.seconds + "s");
-                if (tc.millis > 0) parts.add(tc.millis + "ms");
+                if (components.days > 0) firstTwoParts.add(components.days + "d");
+                if (components.hours > 0) firstTwoParts.add(components.hours + "h");
+                if (components.minutes > 0) firstTwoParts.add(components.minutes + "m");
+                if (components.seconds > 0) firstTwoParts.add(components.seconds + "s");
+                if (components.millis > 0) firstTwoParts.add(components.millis + "ms");
 
-                if (parts.isEmpty()) return "0ms";
-                if (parts.size() == 1) return parts.get(0);
-                return parts.get(0) + " " + parts.get(1);
+                if (firstTwoParts.isEmpty()) return "0ms";
+                if (firstTwoParts.size() == 1) return firstTwoParts.get(0);
+                return firstTwoParts.get(0) + " " + firstTwoParts.get(1);
             }
         },
-
         ISO_8601 {
             @Override public String apply(long nanos) {
                 return formatISO8601(nanos);
             }
         },
-
         DEBUG {
             @Override public String apply(long nanos) {
-                TimeComponents tc = new TimeComponents(nanos);
-                long micros = (nanos % 1_000_000_000L) / 1_000L;
-                long remNano = nanos % 1_000L;
+                TimeComponents components = new TimeComponents(nanos);
+                long microseconds = (nanos % 1_000_000_000L) / 1_000L;
+                long remainingNanos = nanos % 1_000L;
 
                 return String.format(
                         "Days: %d, Hours: %d, Minutes: %d, Seconds: %d, Milliseconds: %d, Microseconds: %d, Nanoseconds: %d",
-                        tc.days, tc.hours, tc.minutes, tc.seconds, tc.millis, micros, remNano
+                        components.days, components.hours, components.minutes, components.seconds,
+                        components.millis, microseconds, remainingNanos
                 );
             }
         };

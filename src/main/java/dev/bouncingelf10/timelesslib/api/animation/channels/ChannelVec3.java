@@ -11,10 +11,10 @@ import java.util.function.Consumer;
 
 public class ChannelVec3 {
     private final String name;
-    private final List<KeyframeVec3> keys = new ArrayList<>();
+    private final List<KeyframeVec3> keyframes = new ArrayList<>();
     private Interpolation defaultInterpolation = Interpolation.EASE;
     private Easing defaultEasing = Easing.LINEAR;
-    private Consumer<Vec3> bound = v -> {};
+    private Consumer<Vec3> boundConsumer = vec -> {};
     private boolean tangentsDirty = true;
     private TimelessClock.TimeSource timeSource = TimelessClock.TimeSources.GAME_TIME;
     private boolean useTimelineTime = true;
@@ -23,148 +23,221 @@ public class ChannelVec3 {
     private double continuity = 0.0;
     private double bias = 0.0;
 
-    public ChannelVec3(String name) { this.name = Objects.requireNonNull(name); }
-    public String name() { return name; }
+    public ChannelVec3(String name) {
+        this.name = Objects.requireNonNull(name);
+    }
+
+    public String name() {
+        return name;
+    }
 
     public ChannelVec3 keyframe(double timeSeconds, Vec3 value) {
-        return keyframe(KeyframeVec3.of(timeSeconds, value));
+        return addKeyframe(KeyframeVec3.of(timeSeconds, value));
     }
+
     public ChannelVec3 keyframe(double timeSeconds, Vec3 value, Easing easing) {
-        return keyframe(KeyframeVec3.of(timeSeconds, value, easing));
-    }
-    public ChannelVec3 keyframe(double timeSeconds, Vec3 value, Interpolation interp) {
-        return keyframe(KeyframeVec3.of(timeSeconds, value, interp));
-    }
-    public ChannelVec3 keyframe(double timeSeconds, Vec3 value, Interpolation interp, Easing easing) {
-        return keyframe(KeyframeVec3.of(timeSeconds, value, easing, interp));
+        return addKeyframe(KeyframeVec3.of(timeSeconds, value, easing));
     }
 
-    public ChannelVec3 keyframe(Duration d, Vec3 value) {
-        double s = d.toNanos() / 1e9;
-        return keyframe(s, value);
-    }
-    public ChannelVec3 keyframe(Duration d, Vec3 value, Easing easing) {
-        double s = d.toNanos() / 1e9;
-        return keyframe(s, value, easing);
-    }
-    public ChannelVec3 keyframe(Duration d, Vec3 value, Interpolation interp) {
-        double s = d.toNanos() / 1e9;
-        return keyframe(s, value, interp);
-    }
-    public ChannelVec3 keyframe(Duration d, Vec3 value, Easing easing, Interpolation interp) {
-        double s = d.toNanos() / 1e9;
-        return keyframe(s, value, interp, easing);
+    public ChannelVec3 keyframe(double timeSeconds, Vec3 value, Interpolation interpolation) {
+        return addKeyframe(KeyframeVec3.of(timeSeconds, value, interpolation));
     }
 
-    public ChannelVec3 keyframe(KeyframeVec3 k) {
-        keys.add(k);
-        keys.sort(Comparator.comparingDouble(kf -> kf.timeSeconds));
+    public ChannelVec3 keyframe(double timeSeconds, Vec3 value, Interpolation interpolation, Easing easing) {
+        return addKeyframe(KeyframeVec3.of(timeSeconds, value, easing, interpolation));
+    }
+
+    public ChannelVec3 keyframe(Duration duration, Vec3 value) {
+        double seconds = duration.toNanos() / 1e9;
+        return keyframe(seconds, value);
+    }
+
+    public ChannelVec3 keyframe(Duration duration, Vec3 value, Easing easing) {
+        double seconds = duration.toNanos() / 1e9;
+        return keyframe(seconds, value, easing);
+    }
+
+    public ChannelVec3 keyframe(Duration duration, Vec3 value, Interpolation interpolation) {
+        double seconds = duration.toNanos() / 1e9;
+        return keyframe(seconds, value, interpolation);
+    }
+
+    public ChannelVec3 keyframe(Duration duration, Vec3 value, Easing easing, Interpolation interpolation) {
+        double seconds = duration.toNanos() / 1e9;
+        return keyframe(seconds, value, interpolation, easing);
+    }
+
+    public ChannelVec3 addKeyframe(KeyframeVec3 keyframe) {
+        keyframes.add(keyframe);
+        keyframes.sort(Comparator.comparingDouble(k -> k.timeSeconds));
         tangentsDirty = true;
         return this;
     }
 
-    public ChannelVec3 timeSource(TimelessClock.TimeSource src) {
+    public ChannelVec3 timeSource(TimelessClock.TimeSource source) {
         this.useTimelineTime = false;
-        this.timeSource = src;
+        this.timeSource = source;
         return this;
     }
 
-    public ChannelVec3 defaultInterpolation(Interpolation i) { this.defaultInterpolation = Objects.requireNonNull(i); return this; }
-    public ChannelVec3 defaultEasing(Easing e) { this.defaultEasing = Objects.requireNonNull(e); return this; }
-    public ChannelVec3 bind(Consumer<Vec3> c) { this.bound = Objects.requireNonNull(c); return this; }
-    public ChannelVec3 setTCB(double tension, double continuity, double bias) { this.tension = tension; this.continuity = continuity; this.bias = bias; tangentsDirty = true; return this; }
+    public ChannelVec3 defaultInterpolation(Interpolation interpolation) {
+        this.defaultInterpolation = Objects.requireNonNull(interpolation);
+        return this;
+    }
+
+    public ChannelVec3 defaultEasing(Easing easing) {
+        this.defaultEasing = Objects.requireNonNull(easing);
+        return this;
+    }
+
+    public ChannelVec3 bind(Consumer<Vec3> consumer) {
+        this.boundConsumer = Objects.requireNonNull(consumer);
+        return this;
+    }
+
+    public ChannelVec3 setTCB(double tension, double continuity, double bias) {
+        this.tension = tension;
+        this.continuity = continuity;
+        this.bias = bias;
+        tangentsDirty = true;
+        return this;
+    }
 
     public double computeDurationSeconds() {
-        if (keys.isEmpty()) return 0.0;
-        return keys.getLast().timeSeconds;
+        if (keyframes.isEmpty()) return 0.0;
+        return keyframes.getLast().timeSeconds;
     }
 
     public void computeTangentsIfNeeded() {
         if (!tangentsDirty) return;
         tangentsDirty = false;
-        int n = keys.size();
-        if (n == 0) return;
-        if (n == 1) { keys.getFirst().tangent = Vec3.ZERO; return; }
 
-        for (int i = 0; i < n; i++) {
-            KeyframeVec3 prev = (i > 0) ? keys.get(i - 1) : keys.get(i);
-            KeyframeVec3 cur  = keys.get(i);
-            KeyframeVec3 next = (i < n - 1) ? keys.get(i + 1) : keys.get(i);
+        int frameCount = keyframes.size();
+        if (frameCount == 0) return;
+        if (frameCount == 1) {
+            keyframes.getFirst().tangent = Vec3.ZERO;
+            return;
+        }
 
-            double dt = next.timeSeconds - prev.timeSeconds;
-            if (dt == 0) { cur.tangent = Vec3.ZERO; continue; }
+        for (int i = 0; i < frameCount; i++) {
+            KeyframeVec3 previous = (i > 0) ? keyframes.get(i - 1) : keyframes.get(i);
+            KeyframeVec3 current = keyframes.get(i);
+            KeyframeVec3 next = (i < frameCount - 1) ? keyframes.get(i + 1) : keyframes.get(i);
 
-            Vec3 dv = new Vec3(next.value.x - prev.value.x, next.value.y - prev.value.y, next.value.z - prev.value.z);
+            double deltaTime = next.timeSeconds - previous.timeSeconds;
+            if (deltaTime == 0.0) {
+                current.tangent = Vec3.ZERO;
+                continue;
+            }
+
+            Vec3 deltaValue = new Vec3(
+                    next.value.x - previous.value.x,
+                    next.value.y - previous.value.y,
+                    next.value.z - previous.value.z
+            );
 
             if (tension == 0.0 && continuity == 0.0 && bias == 0.0) {
-                cur.tangent = new Vec3(0.5 * dv.x / dt, 0.5 * dv.y / dt, 0.5 * dv.z / dt);
+                current.tangent = new Vec3(deltaValue.x / 2.0 / deltaTime, deltaValue.y / 2.0 / deltaTime, deltaValue.z / 2.0 / deltaTime);
             } else {
-                double dt1 = cur.timeSeconds - prev.timeSeconds;
-                double dt2 = next.timeSeconds - cur.timeSeconds;
-                Vec3 d1 = dt1 > 0 ? new Vec3( (cur.value.x - prev.value.x)/dt1, (cur.value.y - prev.value.y)/dt1, (cur.value.z - prev.value.z)/dt1 ) : Vec3.ZERO;
-                Vec3 d2 = dt2 > 0 ? new Vec3( (next.value.x - cur.value.x)/dt2, (next.value.y - cur.value.y)/dt2, (next.value.z - cur.value.z)/dt2 ) : Vec3.ZERO;
+                double dtPrev = current.timeSeconds - previous.timeSeconds;
+                double dtNext = next.timeSeconds - current.timeSeconds;
 
-                double t = tension, c = continuity, b = bias;
-                double k1 = (1 - t) * (1 + c) * (1 + b) / 2.0;
-                double k2 = (1 - t) * (1 - c) * (1 - b) / 2.0;
+                Vec3 derivativePrev = dtPrev > 0
+                        ? new Vec3((current.value.x - previous.value.x) / dtPrev,
+                        (current.value.y - previous.value.y) / dtPrev,
+                        (current.value.z - previous.value.z) / dtPrev)
+                        : Vec3.ZERO;
 
-                cur.tangent = new Vec3(k1 * d1.x + k2 * d2.x, k1 * d1.y + k2 * d2.y, k1 * d1.z + k2 * d2.z);
+                Vec3 derivativeNext = dtNext > 0
+                        ? new Vec3((next.value.x - current.value.x) / dtNext,
+                        (next.value.y - current.value.y) / dtNext,
+                        (next.value.z - current.value.z) / dtNext)
+                        : Vec3.ZERO;
+
+                double k1 = (1 - tension) * (1 + continuity) * (1 + bias) / 2.0;
+                double k2 = (1 - tension) * (1 - continuity) * (1 - bias) / 2.0;
+
+                current.tangent = new Vec3(
+                        k1 * derivativePrev.x + k2 * derivativeNext.x,
+                        k1 * derivativePrev.y + k2 * derivativeNext.y,
+                        k1 * derivativePrev.z + k2 * derivativeNext.z
+                );
             }
         }
     }
 
-    public void evaluateAt(double timeSeconds, Interpolation timelineDefaultInterp, Easing timelineDefaultEasing, boolean timelineComputeTangents) {
+    public void evaluateAt(double timeSeconds, Interpolation timelineDefaultInterpolation, Easing timelineDefaultEasing, boolean computeTangentsForTimeline) {
         double effectiveTime = useTimelineTime ? timeSeconds : (timeSource.now() / 1e9);
 
-        if (keys.isEmpty()) { bound.accept(Vec3.ZERO); return; }
-        if (effectiveTime <= keys.getFirst().timeSeconds) { bound.accept(keys.getFirst().value); return; }
-        if (effectiveTime >= keys.getLast().timeSeconds) { bound.accept(keys.getLast().value); return; }
-
-        KeyframeVec3 left = keys.getFirst(), right = keys.getLast();
-        for (int i = 0; i < keys.size()-1; i++) {
-            KeyframeVec3 a = keys.get(i);
-            KeyframeVec3 b = keys.get(i+1);
-            if (effectiveTime >= a.timeSeconds && effectiveTime <= b.timeSeconds) { left = a; right = b; break; }
+        if (keyframes.isEmpty()) {
+            boundConsumer.accept(Vec3.ZERO);
+            return;
         }
 
-        double span = right.timeSeconds - left.timeSeconds;
-        double t = span == 0 ? 0.0 : (effectiveTime - left.timeSeconds) / span;
+        if (effectiveTime <= keyframes.getFirst().timeSeconds) {
+            boundConsumer.accept(keyframes.getFirst().value);
+            return;
+        }
 
-        Interpolation segmentInterp = left.interpolation != null ? left.interpolation : (defaultInterpolation != null ? defaultInterpolation : timelineDefaultInterp);
-        Easing easing = left.easing != null ? left.easing : (defaultEasing != null ? defaultEasing : timelineDefaultEasing);
+        if (effectiveTime >= keyframes.getLast().timeSeconds) {
+            boundConsumer.accept(keyframes.getLast().value);
+            return;
+        }
 
-        Vec3 out;
-        switch (segmentInterp) {
-            case STEP:
-                out = left.value;
+        KeyframeVec3 leftFrame = keyframes.getFirst();
+        KeyframeVec3 rightFrame = keyframes.getLast();
+        for (int i = 0; i < keyframes.size() - 1; i++) {
+            KeyframeVec3 frameA = keyframes.get(i);
+            KeyframeVec3 frameB = keyframes.get(i + 1);
+            if (effectiveTime >= frameA.timeSeconds && effectiveTime <= frameB.timeSeconds) {
+                leftFrame = frameA;
+                rightFrame = frameB;
                 break;
-            case LINEAR:
-                out = lerp(left.value, right.value, t);
-                break;
-            case EASE:
-                double e = easing == null ? Easing.LINEAR.apply(t) : easing.apply(t);
-                out = lerp(left.value, right.value, e);
-                break;
-            case HERMITE:
-            default:
-                if (timelineComputeTangents) computeTangentsIfNeeded();
-                Vec3 m0 = left.tangent.scale(span);
-                Vec3 m1 = right.tangent.scale(span);
-                double h00 = 2*t*t*t - 3*t*t + 1;
-                double h10 = t*t*t - 2*t*t + t;
-                double h01 = -2*t*t*t + 3*t*t;
-                double h11 = t*t*t - t*t;
-                out = new Vec3(
-                        h00*left.value.x + h10*m0.x + h01*right.value.x + h11*m1.x,
-                        h00*left.value.y + h10*m0.y + h01*right.value.y + h11*m1.y,
-                        h00*left.value.z + h10*m0.z + h01*right.value.z + h11*m1.z
+            }
+        }
+
+        double span = rightFrame.timeSeconds - leftFrame.timeSeconds;
+        double t = span == 0.0 ? 0.0 : (effectiveTime - leftFrame.timeSeconds) / span;
+
+        Interpolation segmentInterpolation = leftFrame.interpolation != null ? leftFrame.interpolation : (defaultInterpolation != null ? defaultInterpolation : timelineDefaultInterpolation);
+        Easing easing = leftFrame.easing != null ? leftFrame.easing : (defaultEasing != null ? defaultEasing : timelineDefaultEasing);
+
+        Vec3 output;
+        switch (segmentInterpolation) {
+            case STEP -> output = leftFrame.value;
+            case LINEAR -> output = lerp(leftFrame.value, rightFrame.value, t);
+            case EASE -> {
+                double easedT = easing == null ? Easing.LINEAR.apply(t) : easing.apply(t);
+                output = lerp(leftFrame.value, rightFrame.value, easedT);
+            }
+            case HERMITE -> {
+                if (computeTangentsForTimeline) computeTangentsIfNeeded();
+                Vec3 m0 = leftFrame.tangent.scale(span);
+                Vec3 m1 = rightFrame.tangent.scale(span);
+
+                double h00 = 2 * t * t * t - 3 * t * t + 1;
+                double h10 = t * t * t - 2 * t * t + t;
+                double h01 = -2 * t * t * t + 3 * t * t;
+                double h11 = t * t * t - t * t;
+
+                output = new Vec3(
+                        h00 * leftFrame.value.x + h10 * m0.x + h01 * rightFrame.value.x + h11 * m1.x,
+                        h00 * leftFrame.value.y + h10 * m0.y + h01 * rightFrame.value.y + h11 * m1.y,
+                        h00 * leftFrame.value.z + h10 * m0.z + h01 * rightFrame.value.z + h11 * m1.z
                 );
-                break;
+            }
+
+            case null, default -> throw new IllegalStateException("Invalid interpolation type: " + segmentInterpolation);
         }
-        bound.accept(out);
+
+        boundConsumer.accept(output);
     }
 
-    private static Vec3 lerp(Vec3 a, Vec3 b, double t) {
-        return new Vec3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
+    private static Vec3 lerp(Vec3 start, Vec3 end, double t) {
+        return new Vec3(
+                start.x + (end.x - start.x) * t,
+                start.y + (end.y - start.y) * t,
+                start.z + (end.z - start.z) * t
+        );
     }
 }
