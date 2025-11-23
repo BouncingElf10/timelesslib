@@ -8,20 +8,12 @@ import net.minecraft.world.phys.Vec3;
 import java.util.*;
 import java.util.function.Consumer;
 
-/**
- * AnimationTimeline aggregates channels (double + vec3), provides playback controls,
- * automatic duration computation (max key time), looping/ping-pong, speed, and update().
- *
- * Time units: seconds (double). Accepts Duration overloads.
- */
 public class AnimationTimeline {
     private final String id;
 
-    // channels
     private final Map<String, ChannelDouble> doubleChannels = new LinkedHashMap<>();
     private final Map<String, ChannelVec3> vecChannels = new LinkedHashMap<>();
 
-    // playback
     private boolean loop = false;
     private boolean pingPong = false;
     private double speed = 1.0;
@@ -30,7 +22,6 @@ public class AnimationTimeline {
     private double cursorSeconds = 0.0;
     private int direction = 1; // 1 forward, -1 backward
 
-    // defaults
     private Interpolation defaultInterpolation = Interpolation.EASE;
     private Easing defaultEasing = Easing.LINEAR;
     private boolean computeTangents = false; // timeline-level opt-in for Hermite tangents
