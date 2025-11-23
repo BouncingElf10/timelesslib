@@ -3,13 +3,13 @@
 	"id": "timelesslib",
 	"version": "${version}",
 	"name": "TimelessLib",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "A lib for all things time!",
 	"authors": [
-		"BoucningElf10"
+		"BouncingElf10"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"homepage": "https://github.com/BouncingElf10/timelesslib",
+		"sources": "https://github.com/BouncingElf10/timelesslib"
 	},
 	"license": "CC0-1.0",
 	"icon": "assets/timelesslib/icon.png",
@@ -24,11 +24,8 @@
 	},
 	"depends": {
 		"fabricloader": ">=0.17.3",
-		"minecraft": "~1.21.5",
+		"minecraft": ">=1.20.5",
 		"java": ">=21",
 		"fabric-api": "*"
-	},
-	"suggests": {
-		"another-mod": "*"
 	}
 }
