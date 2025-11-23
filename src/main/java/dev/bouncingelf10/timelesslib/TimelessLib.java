@@ -9,7 +9,9 @@ import dev.bouncingelf10.timelesslib.api.time.TimeFormatter;
 import dev.bouncingelf10.timelesslib.fabric.TimelessFabricHelper;
 import net.fabricmc.api.ModInitializer;
 
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.server.MinecraftServer;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -44,6 +46,12 @@ public class TimelessLib implements ModInitializer {
 			serverCooldownManager = null;
             serverKeyframeManager = null;
 		});
+
+        ServerTickEvents.END_SERVER_TICK.register(server -> TimelessClock.update());
+        ServerTickEvents.END_SERVER_TICK.register(server -> {
+            if (serverKeyframeManager == null) return;
+            serverKeyframeManager.update(TimelessClock.deltaSeconds());
+        });
 	}
 
 	public static boolean isServerInitialized() {
