@@ -105,7 +105,7 @@ public class ChannelVec3 {
 
     public double computeDurationSeconds() {
         if (keyframes.isEmpty()) return 0.0;
-        return keyframes.getLast().timeSeconds;
+        return keyframes.get(keyframes.size() - 1).timeSeconds;
     }
 
     public void computeTangentsIfNeeded() {
@@ -115,7 +115,7 @@ public class ChannelVec3 {
         int frameCount = keyframes.size();
         if (frameCount == 0) return;
         if (frameCount == 1) {
-            keyframes.getFirst().tangent = Vec3.ZERO;
+            keyframes.get(0).tangent = Vec3.ZERO;
             return;
         }
 
@@ -174,18 +174,18 @@ public class ChannelVec3 {
             return;
         }
 
-        if (effectiveTime <= keyframes.getFirst().timeSeconds) {
-            boundConsumer.accept(keyframes.getFirst().value);
+        if (effectiveTime <= keyframes.get(0).timeSeconds) {
+            boundConsumer.accept(keyframes.get(0).value);
             return;
         }
 
-        if (effectiveTime >= keyframes.getLast().timeSeconds) {
-            boundConsumer.accept(keyframes.getLast().value);
+        if (effectiveTime >= keyframes.get(keyframes.size() - 1).timeSeconds) {
+            boundConsumer.accept(keyframes.get(keyframes.size() - 1).value);
             return;
         }
 
-        KeyframeVec3 leftFrame = keyframes.getFirst();
-        KeyframeVec3 rightFrame = keyframes.getLast();
+        KeyframeVec3 leftFrame = keyframes.get(0);
+        KeyframeVec3 rightFrame = keyframes.get(keyframes.size() - 1);
         for (int i = 0; i < keyframes.size() - 1; i++) {
             KeyframeVec3 frameA = keyframes.get(i);
             KeyframeVec3 frameB = keyframes.get(i + 1);
@@ -226,8 +226,7 @@ public class ChannelVec3 {
                         h00 * leftFrame.value.z + h10 * m0.z + h01 * rightFrame.value.z + h11 * m1.z
                 );
             }
-
-            case null, default -> throw new IllegalStateException("Invalid interpolation type: " + segmentInterpolation);
+            default -> throw new IllegalStateException("Invalid interpolation type: " + segmentInterpolation);
         }
 
         boundConsumer.accept(output);
