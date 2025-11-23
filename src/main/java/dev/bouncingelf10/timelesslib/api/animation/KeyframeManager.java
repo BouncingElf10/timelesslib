@@ -10,9 +10,9 @@ public class KeyframeManager {
 
     public AnimationTimeline createTimeline(String id) {
         Objects.requireNonNull(id);
-        AnimationTimeline t = new AnimationTimeline(id);
-        timelines.put(id, t);
-        return t;
+        AnimationTimeline timeline = new AnimationTimeline(id);
+        timelines.put(id, timeline);
+        return timeline;
     }
 
     public Optional<AnimationTimeline> getTimeline(String id) {
@@ -23,11 +23,11 @@ public class KeyframeManager {
 
     public void update(double deltaSeconds) {
         if (deltaSeconds <= 0) return;
-        for (AnimationTimeline t : timelines.values()) t.update(deltaSeconds);
+        for (AnimationTimeline timeline : timelines.values()) timeline.update(deltaSeconds);
     }
 
-    public void update(Duration d) {
-        double s = d.toNanos() / 1e9;
+    public void update(Duration duration) {
+        double s = duration.toNanos() / 1e9;
         update(s);
     }
 }

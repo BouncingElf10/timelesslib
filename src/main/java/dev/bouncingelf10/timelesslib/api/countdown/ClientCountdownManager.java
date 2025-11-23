@@ -66,7 +66,7 @@ public class ClientCountdownManager<T> extends CountdownManager<T> {
         public boolean isCancelled() { return base.isCancelled(); }
         public boolean isFinished() { return base.isFinished(); }
         public Duration remaining() { return base.remaining(); }
-        public String id() { return base.id(); }
+        public String id() { return base.getId(); }
 
         public ClientCountdown displayToUser() {
             return every(Duration.TICK, client -> TimelessFabricHelper.clientDisplayToUser(remaining().toNanos()));

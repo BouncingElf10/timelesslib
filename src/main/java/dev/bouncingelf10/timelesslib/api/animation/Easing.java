@@ -3,15 +3,15 @@ package dev.bouncingelf10.timelesslib.api.animation;
 import java.util.function.DoubleUnaryOperator;
 
 public abstract class Easing {
-    private final DoubleUnaryOperator fn;
+    private final DoubleUnaryOperator operator;
 
-    private Easing(DoubleUnaryOperator fn) { this.fn = fn; }
+    private Easing(DoubleUnaryOperator operator) { this.operator = operator; }
 
     public double apply(double x) {
-        return clamp01(fn.applyAsDouble(clamp01(x)));
+        return clamp01(operator.applyAsDouble(clamp01(x)));
     }
 
-    private static double clamp01(double v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+    private static double clamp01(double a) { return a < 0 ? 0 : a > 1 ? 1 : a; }
 
     public static final Easing LINEAR = of(x -> x);
 
@@ -90,8 +90,8 @@ public abstract class Easing {
     public static final Easing EASE_OUT_BOUNCE = of(Easing::bounceOut);
     public static final Easing EASE_IN_OUT_BOUNCE = of(x -> x < 0.5 ? (1 - bounceOut(1 - 2 * x)) / 2 : (1 + bounceOut(2 * x - 1)) / 2);
 
-    private static Easing of(DoubleUnaryOperator fn) {
-        return new Easing(fn) {};
+    private static Easing of(DoubleUnaryOperator operator) {
+        return new Easing(operator) {};
     }
 
     private static double bounceOut(double x) {
@@ -120,12 +120,12 @@ public abstract class Easing {
         DoubleUnaryOperator sampleCurveX = (t) -> ((3 * x1 - 3 * x2 + 1) * t * t * t) + ((-6 * x1 + 3 * x2) * t * t) + (3 * x1 * t);
         DoubleUnaryOperator sampleCurveY = (t) -> ((3 * y1 - 3 * y2 + 1) * t * t * t) + ((-6 * y1 + 3 * y2) * t * t) + (3 * y1 * t);
 
-        double lo = 0.0, hi = 1.0, t = x;
+        double low = 0.0, high = 1.0, t = x;
         for (int i = 0; i < 24; i++) {
-            t = (lo + hi) * 0.5;
+            t = (low + high) * 0.5;
             double xt = sampleCurveX.applyAsDouble(t);
             if (Math.abs(xt - x) < 1e-6) break;
-            if (xt > x) hi = t; else lo = t;
+            if (xt > x) high = t; else low = t;
         }
         double y = sampleCurveY.applyAsDouble(t);
         return clamp01(y);

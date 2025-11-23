@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 public abstract class AbstractCooldownManager<T> extends CountdownManager<T> {
-    private final Map<UUID, Map<String, Countdown>> active = new ConcurrentHashMap<>();
+    private final Map<UUID, Map<String, Countdown>> activeCooldowns = new ConcurrentHashMap<>();
 
     protected AbstractCooldownManager(Supplier<T> context) {
         super(context);
@@ -33,38 +33,40 @@ public abstract class AbstractCooldownManager<T> extends CountdownManager<T> {
 
     public Countdown startIfAbsent(UUID owner, String key, Duration duration) {
         owner = normalizeOwner(owner);
-        Map<String, Countdown> ownerMap = active.computeIfAbsent(owner, o -> new ConcurrentHashMap<>());
+
         UUID finalOwner = owner;
-        return ownerMap.computeIfAbsent(key, k -> startCooldownInternal(finalOwner, key, duration, TimelessClock.TimeSources.GAME_TIME));
+        return activeCooldowns
+                .computeIfAbsent(owner, o -> new ConcurrentHashMap<>())
+                .computeIfAbsent(key, k -> startCooldownInternal(finalOwner, key, duration, TimelessClock.TimeSources.GAME_TIME));
     }
 
     public boolean isReady(UUID owner, String key) {
         owner = normalizeOwner(owner);
-        Map<String, Countdown> map = active.get(owner);
-        return map == null || !map.containsKey(key);
+        Map<String, Countdown> ownerCooldowns = activeCooldowns.get(owner);
+        return ownerCooldowns == null || !ownerCooldowns.containsKey(key);
     }
 
     public Duration remaining(UUID owner, String key) {
         owner = normalizeOwner(owner);
-        Countdown countdown = active.getOrDefault(owner, Collections.emptyMap()).get(key);
+        Countdown countdown = activeCooldowns.getOrDefault(owner, Collections.emptyMap()).get(key);
         return countdown == null ? Duration.zero() : countdown.remaining();
     }
 
     public void reset(UUID owner, String key) {
         owner = normalizeOwner(owner);
-        Map<String, Countdown> map = active.get(owner);
-        if (map != null) {
-            Countdown countdown = map.remove(key);
+        Map<String, Countdown> ownerCooldowns = activeCooldowns.get(owner);
+        if (ownerCooldowns != null) {
+            Countdown countdown = ownerCooldowns.remove(key);
             if (countdown != null) countdown.cancel();
-            if (map.isEmpty()) active.remove(owner);
+            if (ownerCooldowns.isEmpty()) activeCooldowns.remove(owner);
         }
     }
 
     public void resetAll(UUID owner) {
         owner = normalizeOwner(owner);
-        Map<String, Countdown> map = active.remove(owner);
-        if (map != null) {
-            map.values().forEach(Countdown::cancel);
+        Map<String, Countdown> ownerCooldowns = activeCooldowns.remove(owner);
+        if (ownerCooldowns != null) {
+            ownerCooldowns.values().forEach(Countdown::cancel);
         }
     }
 
@@ -77,13 +79,14 @@ public abstract class AbstractCooldownManager<T> extends CountdownManager<T> {
     private Countdown startCooldownInternal(UUID owner, String key, Duration duration, TimelessClock.TimeSource timeSource) {
         Countdown countdown = start(duration, Duration.TICK, timeSource);
         countdown.onFinish(ctx -> {
-            Map<String, Countdown> map = active.get(owner);
-            if (map != null) {
-                map.remove(key);
-                if (map.isEmpty()) active.remove(owner);
+            Map<String, Countdown> ownerCooldowns = activeCooldowns.get(owner);
+            if (ownerCooldowns != null) {
+                ownerCooldowns.remove(key);
+                if (ownerCooldowns.isEmpty()) activeCooldowns.remove(owner);
             }
         });
-        active.computeIfAbsent(owner, o -> new ConcurrentHashMap<>()).put(key, countdown);
+
+        activeCooldowns.computeIfAbsent(owner, o -> new ConcurrentHashMap<>()).put(key, countdown);
         return countdown;
     }
 }
