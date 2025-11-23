@@ -124,15 +124,17 @@ public class ChannelDouble {
     }
 
     public void evaluateAt(double timeSeconds, Interpolation timelineDefaultInterp, Easing timelineDefaultEasing, boolean timelineComputeTangents) {
+        double effectiveTime = useTimelineTime ? timeSeconds : (timeSource.now() / 1e9);
+
         if (keys.isEmpty()) {
             bound.accept(0.0);
             return;
         }
-        if (timeSeconds <= keys.getFirst().timeSeconds) {
+        if (effectiveTime <= keys.getFirst().timeSeconds) {
             bound.accept(keys.getFirst().value);
             return;
         }
-        if (timeSeconds >= keys.getLast().timeSeconds) {
+        if (effectiveTime >= keys.getLast().timeSeconds) {
             bound.accept(keys.getLast().value);
             return;
         }
@@ -141,11 +143,11 @@ public class ChannelDouble {
         for (int i = 0; i < keys.size()-1; i++) {
             KeyframeDouble a = keys.get(i);
             KeyframeDouble b = keys.get(i+1);
-            if (timeSeconds >= a.timeSeconds && timeSeconds <= b.timeSeconds) { left = a; right = b; break; }
+            if (effectiveTime >= a.timeSeconds && effectiveTime <= b.timeSeconds) { left = a; right = b; break; }
         }
 
         double span = right.timeSeconds - left.timeSeconds;
-        double t = span == 0 ? 0.0 : (timeSeconds - left.timeSeconds) / span;
+        double t = span == 0 ? 0.0 : (effectiveTime - left.timeSeconds) / span;
 
         Interpolation segmentInterp = left.interpolation != null ? left.interpolation : (defaultInterpolation != null ? defaultInterpolation : timelineDefaultInterp);
         Easing easing = left.easing != null ? left.easing : (defaultEasing != null ? defaultEasing : timelineDefaultEasing);

@@ -114,19 +114,21 @@ public class ChannelVec3 {
     }
 
     public void evaluateAt(double timeSeconds, Interpolation timelineDefaultInterp, Easing timelineDefaultEasing, boolean timelineComputeTangents) {
+        double effectiveTime = useTimelineTime ? timeSeconds : (timeSource.now() / 1e9);
+
         if (keys.isEmpty()) { bound.accept(Vec3.ZERO); return; }
-        if (timeSeconds <= keys.getFirst().timeSeconds) { bound.accept(keys.getFirst().value); return; }
-        if (timeSeconds >= keys.getLast().timeSeconds) { bound.accept(keys.getLast().value); return; }
+        if (effectiveTime <= keys.getFirst().timeSeconds) { bound.accept(keys.getFirst().value); return; }
+        if (effectiveTime >= keys.getLast().timeSeconds) { bound.accept(keys.getLast().value); return; }
 
         KeyframeVec3 left = keys.getFirst(), right = keys.getLast();
         for (int i = 0; i < keys.size()-1; i++) {
             KeyframeVec3 a = keys.get(i);
             KeyframeVec3 b = keys.get(i+1);
-            if (timeSeconds >= a.timeSeconds && timeSeconds <= b.timeSeconds) { left = a; right = b; break; }
+            if (effectiveTime >= a.timeSeconds && effectiveTime <= b.timeSeconds) { left = a; right = b; break; }
         }
 
         double span = right.timeSeconds - left.timeSeconds;
-        double t = span == 0 ? 0.0 : (timeSeconds - left.timeSeconds) / span;
+        double t = span == 0 ? 0.0 : (effectiveTime - left.timeSeconds) / span;
 
         Interpolation segmentInterp = left.interpolation != null ? left.interpolation : (defaultInterpolation != null ? defaultInterpolation : timelineDefaultInterp);
         Easing easing = left.easing != null ? left.easing : (defaultEasing != null ? defaultEasing : timelineDefaultEasing);
