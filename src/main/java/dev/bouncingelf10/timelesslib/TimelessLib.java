@@ -1,5 +1,6 @@
 package dev.bouncingelf10.timelesslib;
 
+import dev.bouncingelf10.timelesslib.api.animation.KeyframeManager;
 import dev.bouncingelf10.timelesslib.api.cooldown.ServerCooldownManager;
 import dev.bouncingelf10.timelesslib.api.countdown.CountdownManager;
 import dev.bouncingelf10.timelesslib.api.scheduler.Scheduler;
@@ -21,6 +22,7 @@ public class TimelessLib implements ModInitializer {
 	@Nullable private static Scheduler<MinecraftServer> serverScheduler;
 	@Nullable private static CountdownManager<MinecraftServer> serverCountdownManager;
 	@Nullable private static ServerCooldownManager<MinecraftServer> serverCooldownManager;
+    @Nullable private static KeyframeManager serverKeyframeManager;
 
 	@Override
 	public void onInitialize() {
@@ -32,6 +34,7 @@ public class TimelessLib implements ModInitializer {
 			serverScheduler = new Scheduler<>(() -> server);
 			serverCountdownManager = new CountdownManager<>(() -> server);
 			serverCooldownManager = new ServerCooldownManager<>(() -> server);
+            serverKeyframeManager = new KeyframeManager();
 		});
 		ServerLifecycleEvents.SERVER_STOPPED.register(server ->  {
 			LOGGER.info("TimelessLib Stopped for Server");
@@ -39,6 +42,7 @@ public class TimelessLib implements ModInitializer {
 			serverScheduler = null;
 			serverCountdownManager = null;
 			serverCooldownManager = null;
+            serverKeyframeManager = null;
 		});
 	}
 
@@ -57,12 +61,17 @@ public class TimelessLib implements ModInitializer {
 	}
 
 	public static CountdownManager<MinecraftServer> getServerCountdownManager() throws IllegalStateException {
-        if (serverCountdownManager == null) throw new IllegalStateException("Server Countdown Manager is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
+        if (serverCountdownManager == null) throw new IllegalStateException("Server CountdownManager is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
 		return serverCountdownManager;
 	}
 
 	public static ServerCooldownManager<MinecraftServer> getServerCooldownManager() throws IllegalStateException {
-        if (serverCooldownManager == null) throw new IllegalStateException("Server Cooldown Manager is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
+        if (serverCooldownManager == null) throw new IllegalStateException("Server CooldownManager is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
 		return serverCooldownManager;
 	}
+
+    public static KeyframeManager getServerKeyframeManager() {
+        if (serverKeyframeManager == null) throw new IllegalStateException("Server KeyframeManager is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
+        return serverKeyframeManager;
+    }
 }
