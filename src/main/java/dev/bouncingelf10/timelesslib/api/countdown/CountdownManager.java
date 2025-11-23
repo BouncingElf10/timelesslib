@@ -1,6 +1,7 @@
 package dev.bouncingelf10.timelesslib.api.countdown;
 
 import dev.bouncingelf10.timelesslib.TimelessClock;
+import dev.bouncingelf10.timelesslib.TimelessLib;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
 import dev.bouncingelf10.timelesslib.api.time.TimeFormatter;
 import dev.bouncingelf10.timelesslib.fabric.TimelessFabricHelper;
@@ -50,16 +51,19 @@ public class CountdownManager<T> {
             return (context, runnable) -> {
                 try { m.invoke(context, runnable); }
                 catch (RuntimeException re) { throw re; }
-                catch (Exception e) { throw new RuntimeException(e); }
+                catch (Exception e) {
+                    TimelessLib.LOGGER.error("Failed to dispatch task to main thread", e);
+                    throw new RuntimeException(e);
+                }
             };
         } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException("Context type " + ctx.getClass().getName() + " does not expose execute(Runnable). Provide explicit dispatcher.");
+            throw new IllegalArgumentException("Context type " + ctx.getClass().getName() + " does not expose execute(Runnable). Provide explicit dispatcher.", e);
         }
     }
 
     public Countdown start(Duration total) {
         Objects.requireNonNull(total);
-        return start(total, Duration.ofMillis(50), TimelessClock.TimeSources.GAME_TIME); // default tick 50ms (20 TPS friendly)
+        return start(total, Duration.ofMillis(50), TimelessClock.TimeSources.GAME_TIME);
     }
 
     public Countdown startRealtime(Duration total) {
@@ -91,7 +95,10 @@ public class CountdownManager<T> {
     public void shutdownGracefully(long timeout, TimeUnit unit) throws InterruptedException {
         active.values().forEach(Countdown::cancelSilently);
         executor.shutdown();
-        executor.awaitTermination(timeout, unit);
+        if (!executor.awaitTermination(timeout, unit)) {
+            TimelessLib.LOGGER.warn("CountdownManager did not shutdown gracefully within the timeout");
+            executor.shutdownNow();
+        }
     }
 
     public class Countdown {
@@ -121,7 +128,7 @@ public class CountdownManager<T> {
         Countdown(Duration total, Duration tickEvery, TimelessClock.TimeSource timeSource) {
             this.total = total;
             this.totalNanos = total.toNanos();
-            this.tickNanos = Math.max(1L, tickEvery.toNanos()); // avoid zero
+            this.tickNanos = Math.max(1L, tickEvery.toNanos());
             this.timeSource = timeSource;
         }
 
@@ -141,22 +148,25 @@ public class CountdownManager<T> {
             long delay = Math.min(tickNanos, Math.max(0L, remaining));
             future = executor.schedule(() -> {
                 T ctx = contextProvider.get();
-                if (ctx == null) return;
+                if (ctx == null) {
+                    TimelessLib.LOGGER.warn("Context provider returned null during countdown tick, cancelling countdown {}", id);
+                    cancel();
+                    return;
+                }
                 try {
                     mainThreadDispatcher.accept(ctx, this::runTickOnMain);
                 } catch (Throwable t) {
-                    t.printStackTrace();
-                    try { runTickOnMain(); } catch (Throwable ignored) {}
+                    TimelessLib.LOGGER.error("Error dispatching countdown tick for {}", id, t);
+                    try { runTickOnMain(); } catch (Throwable inner) {
+                        TimelessLib.LOGGER.error("Error running tick directly for {}", id, inner);
+                    }
                 }
             }, delay, TimeUnit.NANOSECONDS);
         }
 
         private void runTickOnMain() {
             if (cancelled.get() || finished.get()) return;
-
-            if (paused.get()) {
-                return;
-            }
+            if (paused.get()) return;
 
             long now = timeSource.now();
             long remaining = Math.max(0L, endTimeNanos - now);
@@ -166,27 +176,27 @@ public class CountdownManager<T> {
 
             T ctx = contextProvider.get();
             if (ctx == null) {
+                TimelessLib.LOGGER.warn("Context provider returned null during countdown tick, cancelling countdown {}", id);
                 cancel();
                 return;
             }
 
-            for (BiConsumer<T, Duration> handler : onTick) {
-                try { handler.accept(ctx, remainingDuration); } catch (Throwable t) { t.printStackTrace(); }
-            }
+            onTick.forEach(handler -> {
+                try { handler.accept(ctx, remainingDuration); }
+                catch (Throwable t) { TimelessLib.LOGGER.error("Error in onTick handler for {}", id, t); }
+            });
 
-            if (!intervalHandlers.isEmpty()) {
-                for (Map.Entry<Long, List<Consumer<T>>> e : intervalHandlers.entrySet()) {
-                    long interval = e.getKey();
-                    long nextToFire = nextElapsedToFire.getOrDefault(interval, interval);
-                    while (elapsed >= nextToFire) {
-                        for (Consumer<T> h : e.getValue()) {
-                            try { h.accept(ctx); } catch (Throwable t) { t.printStackTrace(); }
-                        }
-                        nextToFire += interval;
-                        nextElapsedToFire.put(interval, nextToFire);
+            intervalHandlers.forEach((interval, handlers) -> {
+                long nextToFire = nextElapsedToFire.getOrDefault(interval, interval);
+                while (elapsed >= nextToFire) {
+                    for (Consumer<T> h : handlers) {
+                        try { h.accept(ctx); }
+                        catch (Throwable t) { TimelessLib.LOGGER.error("Error in interval handler for {} at interval {}", id, interval, t); }
                     }
+                    nextToFire += interval;
+                    nextElapsedToFire.put(interval, nextToFire);
                 }
-            }
+            });
 
             if (!thresholds.isEmpty()) {
                 var toFire = thresholds.tailMap(remaining, true);
@@ -196,7 +206,8 @@ public class CountdownManager<T> {
                         List<Consumer<T>> handlers = thresholds.remove(k);
                         if (handlers == null) continue;
                         for (Consumer<T> h : handlers) {
-                            try { h.accept(ctx); } catch (Throwable t) { t.printStackTrace(); }
+                            try { h.accept(ctx); }
+                            catch (Throwable t) { TimelessLib.LOGGER.error("Error in threshold handler for {} at {}", id, k, t); }
                         }
                     }
                 }
@@ -205,9 +216,10 @@ public class CountdownManager<T> {
             if (remaining == 0L) {
                 if (finished.compareAndSet(false, true)) {
                     try {
-                        for (Consumer<T> f : onFinish) {
-                            try { f.accept(ctx); } catch (Throwable t) { t.printStackTrace(); }
-                        }
+                        onFinish.forEach(f -> {
+                            try { f.accept(ctx); }
+                            catch (Throwable t) { TimelessLib.LOGGER.error("Error in onFinish handler for {}", id, t); }
+                        });
                     } finally {
                         active.remove(id);
                     }
