@@ -105,7 +105,7 @@ public class ChannelDouble {
 
     public double computeDurationSeconds() {
         if (keyframes.isEmpty()) return 0.0;
-        return keyframes.getLast().timeSeconds;
+        return keyframes.get(keyframes.size() - 1).timeSeconds;
     }
 
     public void computeTangentsIfNeeded() {
@@ -115,12 +115,12 @@ public class ChannelDouble {
         int frameCount = keyframes.size();
         if (frameCount == 0) return;
         if (frameCount == 1) {
-            keyframes.getFirst().tangent = 0.0;
+            keyframes.get(0).tangent = 0.0;
             return;
         }
 
         for (int i = 0; i < frameCount; i++) {
-            KeyframeDouble previous = (i > 0) ? keyframes.get(i - 1) : keyframes.get(i);
+            KeyframeDouble previous = (i > 0) ? keyframes.get(i - 1) : keyframes.get(0);
             KeyframeDouble current = keyframes.get(i);
             KeyframeDouble next = (i < frameCount - 1) ? keyframes.get(i + 1) : keyframes.get(i);
 
@@ -157,18 +157,18 @@ public class ChannelDouble {
             return;
         }
 
-        if (effectiveTime <= keyframes.getFirst().timeSeconds) {
-            boundConsumer.accept(keyframes.getFirst().value);
+        if (effectiveTime <= keyframes.get(0).timeSeconds) {
+            boundConsumer.accept(keyframes.get(0).value);
             return;
         }
 
-        if (effectiveTime >= keyframes.getLast().timeSeconds) {
-            boundConsumer.accept(keyframes.getLast().value);
+        if (effectiveTime >= keyframes.get(keyframes.size() - 1).timeSeconds) {
+            boundConsumer.accept(keyframes.get(keyframes.size() - 1).value);
             return;
         }
 
-        KeyframeDouble leftFrame = keyframes.getFirst();
-        KeyframeDouble rightFrame = keyframes.getLast();
+        KeyframeDouble leftFrame = keyframes.get(0);
+        KeyframeDouble rightFrame = keyframes.get(keyframes.size() - 1);
         for (int i = 0; i < keyframes.size() - 1; i++) {
             KeyframeDouble frameA = keyframes.get(i);
             KeyframeDouble frameB = keyframes.get(i + 1);
@@ -205,7 +205,7 @@ public class ChannelDouble {
 
                 outputValue = h00 * leftFrame.value + h10 * m0 + h01 * rightFrame.value + h11 * m1;
             }
-            case null, default -> throw new IllegalStateException("Invalid interpolation type: " + segmentInterpolation);
+            default -> throw new IllegalStateException("Invalid interpolation type: " + segmentInterpolation);
         }
 
         boundConsumer.accept(outputValue);
