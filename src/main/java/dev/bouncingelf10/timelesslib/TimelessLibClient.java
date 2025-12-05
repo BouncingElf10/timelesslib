@@ -1,6 +1,6 @@
 package dev.bouncingelf10.timelesslib;
 
-import dev.bouncingelf10.timelesslib.api.animation.KeyframeManager;
+import dev.bouncingelf10.timelesslib.api.animation.AnimationManager;
 import dev.bouncingelf10.timelesslib.api.cooldown.ClientCooldownManager;
 import dev.bouncingelf10.timelesslib.api.countdown.CountdownManager;
 import dev.bouncingelf10.timelesslib.api.scheduler.Scheduler;
@@ -15,14 +15,14 @@ public class TimelessLibClient implements ClientModInitializer {
 	public static final Scheduler<Minecraft> clientScheduler = new Scheduler<>(TimelessFabricHelper::getClient);
 	public static final CountdownManager<Minecraft> clientCountdownManager = new CountdownManager<>(TimelessFabricHelper::getClient);
 	public static final ClientCooldownManager<Minecraft> clientCooldownManager = new ClientCooldownManager<>(TimelessFabricHelper::getClient, TimelessFabricHelper.getPlayerUuid());
-    public static final KeyframeManager clientKeyframeManager = new KeyframeManager();
+    public static final AnimationManager CLIENT_ANIMATION_MANAGER = new AnimationManager();
 
 	@Override
 	public void onInitializeClient() {
 		LOGGER.info("TimelessLib Client Initialising");
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> TimelessClock.update());
-        ClientTickEvents.END_CLIENT_TICK.register(client -> clientKeyframeManager.update(TimelessClock.deltaSeconds()));
+        ClientTickEvents.END_CLIENT_TICK.register(client -> CLIENT_ANIMATION_MANAGER.update());
     }
 
 	public static Scheduler<Minecraft> getClientScheduler() {
@@ -34,7 +34,7 @@ public class TimelessLibClient implements ClientModInitializer {
 	public static CountdownManager<Minecraft> getClientCooldownManager() {
 		return clientCooldownManager;
 	}
-    public static KeyframeManager getClientKeyframeManager() {
-        return clientKeyframeManager;
+    public static AnimationManager getClientAnimationManager() {
+        return CLIENT_ANIMATION_MANAGER;
     }
 }

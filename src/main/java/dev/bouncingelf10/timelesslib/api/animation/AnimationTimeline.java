@@ -1,5 +1,6 @@
 package dev.bouncingelf10.timelesslib.api.animation;
 
+import dev.bouncingelf10.timelesslib.TimelessClock;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
 import dev.bouncingelf10.timelesslib.api.animation.channels.ChannelDouble;
 import dev.bouncingelf10.timelesslib.api.animation.channels.ChannelVec3;
@@ -32,6 +33,9 @@ public class AnimationTimeline {
 
     private double cachedDurationSeconds = 0.0;
     private boolean durationDirty = true;
+
+    private TimelessClock.TimeSource timeSource = TimelessClock.TimeSources.GAME_TIME;
+    private long lastTimelineNanoTime = timeSource.now();
 
     public AnimationTimeline(String timelineId) {
         this.timelineId = Objects.requireNonNull(timelineId);
@@ -71,6 +75,23 @@ public class AnimationTimeline {
         isFinished = false;
         markDurationDirty();
         recomputeAllTangents();
+    }
+
+    public void playOrReset() {
+        if (this.isPlaying()) {
+            this.stop();
+            this.play();
+        } else {
+            this.play();
+        }
+    }
+
+    public void pauseOrUnpause() {
+        if (this.isPlaying()) {
+            this.pause();
+        } else {
+            this.play();
+        }
     }
 
     public void seek(double seconds) {
@@ -163,6 +184,21 @@ public class AnimationTimeline {
         cachedDurationSeconds = maxDuration;
         durationDirty = false;
         return cachedDurationSeconds;
+    }
+
+    double getDeltaSeconds() {
+        long now = timeSource.now();
+        double delta = (now - lastTimelineNanoTime) / 1e9;
+        lastTimelineNanoTime = now;
+        if (!isPlaying) return 0.0;
+        if (timeSource == TimelessClock.TimeSources.GAME_TIME && TimelessClock.isPaused()) return 0.0;
+        return delta * playbackSpeed;
+    }
+
+    public AnimationTimeline setTimeSource(TimelessClock.TimeSource source) {
+        this.timeSource = Objects.requireNonNull(source);
+        this.lastTimelineNanoTime = source.now();
+        return this;
     }
 
     private void markDurationDirty() { durationDirty = true; }
