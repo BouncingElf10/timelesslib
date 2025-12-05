@@ -37,13 +37,6 @@ public final class TimelessClock {
         paused = false;
     }
 
-    public static void setTimeSource(TimeSource source) {
-        if (source != null) {
-            timeSource = source;
-            reset();
-        }
-    }
-
     @FunctionalInterface
     public interface TimeSource {
         long now();

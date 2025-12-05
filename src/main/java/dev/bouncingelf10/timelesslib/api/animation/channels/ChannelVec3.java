@@ -16,8 +16,6 @@ public class ChannelVec3 {
     private Easing defaultEasing = Easing.LINEAR;
     private Consumer<Vec3> boundConsumer = vec -> {};
     private boolean tangentsDirty = true;
-    private TimelessClock.TimeSource timeSource = TimelessClock.TimeSources.GAME_TIME;
-    private boolean useTimelineTime = true;
 
     private double tension = 0.0;
     private double continuity = 0.0;
@@ -71,12 +69,6 @@ public class ChannelVec3 {
         keyframes.add(keyframe);
         keyframes.sort(Comparator.comparingDouble(k -> k.timeSeconds));
         tangentsDirty = true;
-        return this;
-    }
-
-    public ChannelVec3 timeSource(TimelessClock.TimeSource source) {
-        this.useTimelineTime = false;
-        this.timeSource = source;
         return this;
     }
 
@@ -167,19 +159,17 @@ public class ChannelVec3 {
     }
 
     public void evaluateAt(double timeSeconds, Interpolation timelineDefaultInterpolation, Easing timelineDefaultEasing, boolean computeTangentsForTimeline) {
-        double effectiveTime = useTimelineTime ? timeSeconds : (timeSource.now() / 1e9);
-
         if (keyframes.isEmpty()) {
-            boundConsumer.accept(Vec3.ZERO);
+            boundConsumer.accept(new Vec3(0.0, 0.0, 0.0));
             return;
         }
 
-        if (effectiveTime <= keyframes.getFirst().timeSeconds) {
+        if (timeSeconds <= keyframes.getFirst().timeSeconds) {
             boundConsumer.accept(keyframes.getFirst().value);
             return;
         }
 
-        if (effectiveTime >= keyframes.getLast().timeSeconds) {
+        if (timeSeconds >= keyframes.getLast().timeSeconds) {
             boundConsumer.accept(keyframes.getLast().value);
             return;
         }
@@ -189,7 +179,7 @@ public class ChannelVec3 {
         for (int i = 0; i < keyframes.size() - 1; i++) {
             KeyframeVec3 frameA = keyframes.get(i);
             KeyframeVec3 frameB = keyframes.get(i + 1);
-            if (effectiveTime >= frameA.timeSeconds && effectiveTime <= frameB.timeSeconds) {
+            if (timeSeconds >= frameA.timeSeconds && timeSeconds <= frameB.timeSeconds) {
                 leftFrame = frameA;
                 rightFrame = frameB;
                 break;
@@ -197,7 +187,7 @@ public class ChannelVec3 {
         }
 
         double span = rightFrame.timeSeconds - leftFrame.timeSeconds;
-        double t = span == 0.0 ? 0.0 : (effectiveTime - leftFrame.timeSeconds) / span;
+        double t = span == 0.0 ? 0.0 : (timeSeconds - leftFrame.timeSeconds) / span;
 
         Interpolation segmentInterpolation = leftFrame.interpolation != null ? leftFrame.interpolation : (defaultInterpolation != null ? defaultInterpolation : timelineDefaultInterpolation);
         Easing easing = leftFrame.easing != null ? leftFrame.easing : (defaultEasing != null ? defaultEasing : timelineDefaultEasing);
