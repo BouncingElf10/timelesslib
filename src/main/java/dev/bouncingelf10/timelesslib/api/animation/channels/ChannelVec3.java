@@ -14,6 +14,9 @@ public class ChannelVec3 {
     private final List<KeyframeVec3> keyframes = new ArrayList<>();
     private Interpolation defaultInterpolation = Interpolation.EASE;
     private Easing defaultEasing = Easing.LINEAR;
+
+    private TangentMode tangentMode = TangentMode.ZERO;
+
     private Consumer<Vec3> boundConsumer = vec -> {};
     private boolean tangentsDirty = true;
 
@@ -82,6 +85,12 @@ public class ChannelVec3 {
         return this;
     }
 
+    public ChannelVec3 setTangentMode(TangentMode mode) {
+        this.tangentMode = mode;
+        this.tangentsDirty = true;
+        return this;
+    }
+
     public ChannelVec3 bind(Consumer<Vec3> consumer) {
         this.boundConsumer = Objects.requireNonNull(consumer);
         return this;
@@ -111,52 +120,78 @@ public class ChannelVec3 {
             return;
         }
 
-        for (int i = 0; i < frameCount; i++) {
-            KeyframeVec3 previous = (i > 0) ? keyframes.get(i - 1) : keyframes.get(i);
-            KeyframeVec3 current = keyframes.get(i);
-            KeyframeVec3 next = (i < frameCount - 1) ? keyframes.get(i + 1) : keyframes.get(i);
+        switch (tangentMode) {
 
-            double deltaTime = next.timeSeconds - previous.timeSeconds;
-            if (deltaTime == 0.0) {
-                current.tangent = Vec3.ZERO;
-                continue;
+            case ZERO -> {
+                for (KeyframeVec3 kf : keyframes)
+                    kf.tangent = Vec3.ZERO;
             }
 
-            Vec3 deltaValue = new Vec3(
-                    next.value.x - previous.value.x,
-                    next.value.y - previous.value.y,
-                    next.value.z - previous.value.z
-            );
+            case CATMULL_ROM -> {
+                for (int i = 0; i < frameCount; i++) {
+                    KeyframeVec3 prev = (i > 0) ? keyframes.get(i - 1) : keyframes.get(i);
+                    KeyframeVec3 next = (i < frameCount - 1) ? keyframes.get(i + 1) : keyframes.get(i);
 
-            if (tension == 0.0 && continuity == 0.0 && bias == 0.0) {
-                current.tangent = new Vec3(deltaValue.x / 2.0 / deltaTime, deltaValue.y / 2.0 / deltaTime, deltaValue.z / 2.0 / deltaTime);
-            } else {
-                double dtPrev = current.timeSeconds - previous.timeSeconds;
-                double dtNext = next.timeSeconds - current.timeSeconds;
+                    double dt = next.timeSeconds - prev.timeSeconds;
+                    if (dt == 0) {
+                        keyframes.get(i).tangent = Vec3.ZERO;
+                    } else {
+                        Vec3 delta = next.value.subtract(prev.value).scale(0.5 / dt);
+                        keyframes.get(i).tangent = delta;
+                    }
+                }
+            }
 
-                Vec3 derivativePrev = dtPrev > 0
-                        ? new Vec3((current.value.x - previous.value.x) / dtPrev,
-                        (current.value.y - previous.value.y) / dtPrev,
-                        (current.value.z - previous.value.z) / dtPrev)
-                        : Vec3.ZERO;
+            case TCB -> {
+                for (int i = 0; i < frameCount; i++) {
+                    KeyframeVec3 previous = (i > 0) ? keyframes.get(i - 1) : keyframes.get(i);
+                    KeyframeVec3 current = keyframes.get(i);
+                    KeyframeVec3 next = (i < frameCount - 1) ? keyframes.get(i + 1) : keyframes.get(i);
 
-                Vec3 derivativeNext = dtNext > 0
-                        ? new Vec3((next.value.x - current.value.x) / dtNext,
-                        (next.value.y - current.value.y) / dtNext,
-                        (next.value.z - current.value.z) / dtNext)
-                        : Vec3.ZERO;
+                    double deltaTime = next.timeSeconds - previous.timeSeconds;
+                    if (deltaTime == 0.0) {
+                        current.tangent = Vec3.ZERO;
+                        continue;
+                    }
 
-                double k1 = (1 - tension) * (1 + continuity) * (1 + bias) / 2.0;
-                double k2 = (1 - tension) * (1 - continuity) * (1 - bias) / 2.0;
+                    Vec3 deltaValue = new Vec3(
+                            next.value.x - previous.value.x,
+                            next.value.y - previous.value.y,
+                            next.value.z - previous.value.z
+                    );
 
-                current.tangent = new Vec3(
-                        k1 * derivativePrev.x + k2 * derivativeNext.x,
-                        k1 * derivativePrev.y + k2 * derivativeNext.y,
-                        k1 * derivativePrev.z + k2 * derivativeNext.z
-                );
+                    if (tension == 0.0 && continuity == 0.0 && bias == 0.0) {
+                        current.tangent = new Vec3(deltaValue.x / 2.0 / deltaTime, deltaValue.y / 2.0 / deltaTime, deltaValue.z / 2.0 / deltaTime);
+                    } else {
+                        double dtPrev = current.timeSeconds - previous.timeSeconds;
+                        double dtNext = next.timeSeconds - current.timeSeconds;
+
+                        Vec3 derivativePrev = dtPrev > 0
+                                ? new Vec3((current.value.x - previous.value.x) / dtPrev,
+                                (current.value.y - previous.value.y) / dtPrev,
+                                (current.value.z - previous.value.z) / dtPrev)
+                                : Vec3.ZERO;
+
+                        Vec3 derivativeNext = dtNext > 0
+                                ? new Vec3((next.value.x - current.value.x) / dtNext,
+                                (next.value.y - current.value.y) / dtNext,
+                                (next.value.z - current.value.z) / dtNext)
+                                : Vec3.ZERO;
+
+                        double k1 = (1 - tension) * (1 + continuity) * (1 + bias) / 2.0;
+                        double k2 = (1 - tension) * (1 - continuity) * (1 - bias) / 2.0;
+
+                        current.tangent = new Vec3(
+                                k1 * derivativePrev.x + k2 * derivativeNext.x,
+                                k1 * derivativePrev.y + k2 * derivativeNext.y,
+                                k1 * derivativePrev.z + k2 * derivativeNext.z
+                        );
+                    }
+                }
             }
         }
     }
+
 
     public void evaluateAt(double timeSeconds, Interpolation timelineDefaultInterpolation, Easing timelineDefaultEasing, boolean computeTangentsForTimeline) {
         if (keyframes.isEmpty()) {

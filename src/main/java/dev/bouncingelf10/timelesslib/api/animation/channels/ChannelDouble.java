@@ -13,6 +13,8 @@ public class ChannelDouble {
     private final List<KeyframeDouble> keyframes = new ArrayList<>();
     private Interpolation defaultInterpolation = Interpolation.EASE;
     private Easing defaultEasing = Easing.LINEAR;
+    private TangentMode tangentMode = TangentMode.ZERO;
+
     private Consumer<Double> boundConsumer = value -> {};
 
     private double tension = 0.0;
@@ -82,6 +84,12 @@ public class ChannelDouble {
         return this;
     }
 
+    public ChannelDouble setTangentMode(TangentMode mode) {
+        this.tangentMode = mode;
+        this.tangentsDirty = true;
+        return this;
+    }
+
     public ChannelDouble bind(Consumer<Double> consumer) {
         this.boundConsumer = Objects.requireNonNull(consumer);
         return this;
@@ -107,36 +115,41 @@ public class ChannelDouble {
         int frameCount = keyframes.size();
         if (frameCount == 0) return;
         if (frameCount == 1) {
-            keyframes.getFirst().tangent = 0.0;
+            keyframes.getFirst().tangent = 0;
             return;
         }
 
-        for (int i = 0; i < frameCount; i++) {
-            KeyframeDouble previous = (i > 0) ? keyframes.get(i - 1) : keyframes.get(i);
-            KeyframeDouble current = keyframes.get(i);
-            KeyframeDouble next = (i < frameCount - 1) ? keyframes.get(i + 1) : keyframes.get(i);
-
-            double deltaTime = next.timeSeconds - previous.timeSeconds;
-            if (deltaTime == 0.0) {
-                current.tangent = 0.0;
-                continue;
+        switch (tangentMode) {
+            case ZERO -> {
+                for (KeyframeDouble kf : keyframes)
+                    kf.tangent = 0.0;
             }
+            case CATMULL_ROM -> {
+                for (int i = 0; i < frameCount; i++) {
+                    KeyframeDouble prev = (i > 0) ? keyframes.get(i - 1) : keyframes.get(i);
+                    KeyframeDouble next = (i < frameCount - 1) ? keyframes.get(i + 1) : keyframes.get(i);
 
-            double deltaValue = next.value - previous.value;
+                    double dt = next.timeSeconds - prev.timeSeconds;
+                    if (dt == 0)
+                        keyframes.get(i).tangent = 0;
+                    else
+                        keyframes.get(i).tangent = (next.value - prev.value) / dt * 0.5;
+                }
+            }
+            case TCB -> {
+                for (int i = 0; i < frameCount; i++) {
+                    KeyframeDouble previous = (i > 0) ? keyframes.get(i - 1) : keyframes.get(i);
+                    KeyframeDouble current = keyframes.get(i);
+                    KeyframeDouble next = (i < frameCount - 1) ? keyframes.get(i + 1) : keyframes.get(i);
 
-            if (tension == 0.0 && continuity == 0.0 && bias == 0.0) {
-                current.tangent = 0.5 * (deltaValue / deltaTime);
-            } else {
-                double deltaTimePrev = current.timeSeconds - previous.timeSeconds;
-                double deltaTimeNext = next.timeSeconds - current.timeSeconds;
-                double deltaValuePrev = current.value - previous.value;
-                double deltaValueNext = next.value - current.value;
+                    double deltaTimePrev = current.timeSeconds - previous.timeSeconds;
+                    double deltaTimeNext = next.timeSeconds - current.timeSeconds;
 
-                double derivativePrev = deltaTimePrev > 0 ? deltaValuePrev / deltaTimePrev : 0.0;
-                double derivativeNext = deltaTimeNext > 0 ? deltaValueNext / deltaTimeNext : 0.0;
+                    double derivativePrev = deltaTimePrev > 0 ? (current.value - previous.value) / deltaTimePrev : 0.0;
+                    double derivativeNext = deltaTimeNext > 0 ? (next.value - current.value) / deltaTimeNext : 0.0;
 
-                current.tangent = (1 - tension) * ((1 + continuity) * (1 + bias) * derivativePrev / 2.0
-                        + (1 - continuity) * (1 - bias) * derivativeNext / 2.0);
+                    current.tangent = (1 - tension) * ((1 + continuity) * (1 + bias) * derivativePrev / 2.0 + (1 - continuity) * (1 - bias) * derivativeNext / 2.0);
+                }
             }
         }
     }
