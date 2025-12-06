@@ -1,11 +1,14 @@
 package dev.bouncingelf10.timelesslib;
 
 import dev.bouncingelf10.timelesslib.api.animation.AnimationManager;
+import dev.bouncingelf10.timelesslib.api.animation.AnimationTimeline;
+import dev.bouncingelf10.timelesslib.api.animation.Interpolation;
 import dev.bouncingelf10.timelesslib.api.cooldown.ClientCooldownManager;
 import dev.bouncingelf10.timelesslib.api.countdown.CountdownManager;
 import dev.bouncingelf10.timelesslib.api.scheduler.Scheduler;
 import dev.bouncingelf10.timelesslib.fabric.TimelessFabricHelper;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
 
