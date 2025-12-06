@@ -74,7 +74,6 @@ public class AnimationTimeline {
         playDirection = 1;
         isFinished = false;
         markDurationDirty();
-        recomputeAllTangents();
     }
 
     public void playOrReset() {
@@ -161,17 +160,10 @@ public class AnimationTimeline {
     }
 
     private void evaluateAll(double timeSeconds) {
-        recomputeAllTangents();
         for (ChannelDouble ch : doubleChannels.values())
-            ch.evaluateAt(timeSeconds, defaultInterpolation, defaultEasing, computeTangents);
+            ch.evaluateAt(timeSeconds, defaultInterpolation, defaultEasing);
         for (ChannelVec3 ch : vec3Channels.values())
-            ch.evaluateAt(timeSeconds, defaultInterpolation, defaultEasing, computeTangents);
-    }
-
-    private void recomputeAllTangents() {
-        if (!computeTangents) return;
-        doubleChannels.values().forEach(ChannelDouble::computeTangentsIfNeeded);
-        vec3Channels.values().forEach(ChannelVec3::computeTangentsIfNeeded);
+            ch.evaluateAt(timeSeconds, defaultInterpolation, defaultEasing);
     }
 
     public double getDurationSeconds() {
