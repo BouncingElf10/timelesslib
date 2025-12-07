@@ -27,6 +27,10 @@ public class ClientCooldownManager<T> extends AbstractCooldownManager<T> {
         return super.startRealtime(localPlayer, key, duration);
     }
 
+    public Countdown startIfAbsent(String key, Duration duration) {
+        return super.startIfAbsent(localPlayer, key, duration);
+    }
+
     public boolean isReady(String key) {
         return super.isReady(localPlayer, key);
     }
