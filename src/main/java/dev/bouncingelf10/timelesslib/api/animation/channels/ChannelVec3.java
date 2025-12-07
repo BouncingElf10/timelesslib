@@ -1,8 +1,6 @@
 package dev.bouncingelf10.timelesslib.api.animation.channels;
 
-import dev.bouncingelf10.timelesslib.TimelessClock;
 import dev.bouncingelf10.timelesslib.api.animation.*;
-import dev.bouncingelf10.timelesslib.api.animation.keyframes.KeyframeDouble;
 import dev.bouncingelf10.timelesslib.api.animation.keyframes.KeyframeVec3;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
 import net.minecraft.world.phys.Vec3;
@@ -146,10 +144,6 @@ public class ChannelVec3 {
                         catmullRom(p0.y, p1.y, p2.y, p3.y, t),
                         catmullRom(p0.z, p1.z, p2.z, p3.z, t)
                 );
-            }
-            case CUBIC -> {
-                outputValue = Vec3.ZERO;
-                throw new UnsupportedOperationException("Cubic interpolation not yet implemented");
             }
             case null, default -> throw new IllegalStateException("Invalid interpolation type: " + segmentInterpolation);
         }

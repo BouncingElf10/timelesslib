@@ -4,6 +4,5 @@ public enum Interpolation {
     STEP,
     LINEAR,
     EASE,
-    CATMULL,
-    CUBIC
+    CATMULL
 }

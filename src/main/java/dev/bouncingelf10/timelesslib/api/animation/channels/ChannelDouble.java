@@ -140,10 +140,6 @@ public class ChannelDouble {
 
                 outputValue = catmullRom(p0, p1, p2, p3, t);
             }
-            case CUBIC -> {
-                outputValue = 0.0;
-                throw new UnsupportedOperationException("Cubic interpolation not yet implemented");
-            }
             case null, default -> throw new IllegalStateException("Invalid interpolation type: " + segmentInterpolation);
         }
 
