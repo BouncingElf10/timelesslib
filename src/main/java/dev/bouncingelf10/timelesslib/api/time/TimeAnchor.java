@@ -99,6 +99,22 @@ public class TimeAnchor {
         pause();
     }
 
+    public void playOrReset() {
+        if (this.isPaused()) {
+            this.resume();
+        } else {
+            this.reset();
+        }
+    }
+
+    public void pauseOrUnpause() {
+        if (!this.isPaused()) {
+            this.pause();
+        } else {
+            this.resume();
+        }
+    }
+
     public Duration snapshot() {
         return Duration.ofNanos(elapsedNanos());
     }
