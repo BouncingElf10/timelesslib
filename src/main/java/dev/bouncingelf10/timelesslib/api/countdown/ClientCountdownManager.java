@@ -62,6 +62,7 @@ public class ClientCountdownManager<T> extends CountdownManager<T> {
         public boolean pause() { return base.pause(); }
         public boolean resume() { return base.resume(); }
         public boolean cancel() { return base.cancel(); }
+        public boolean pauseOrUnpause() { return base.pauseOrUnpause(); }
         public boolean isPaused() { return base.isPaused(); }
         public boolean isCancelled() { return base.isCancelled(); }
         public boolean isFinished() { return base.isFinished(); }
