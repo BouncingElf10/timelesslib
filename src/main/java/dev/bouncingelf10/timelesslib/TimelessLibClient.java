@@ -34,7 +34,7 @@ public class TimelessLibClient implements ClientModInitializer {
 	public static CountdownManager<Minecraft> getClientCountdownManager() {
 		return clientCountdownManager;
 	}
-	public static CountdownManager<Minecraft> getClientCooldownManager() {
+	public static ClientCooldownManager<Minecraft> getClientCooldownManager() {
 		return clientCooldownManager;
 	}
     public static AnimationManager getClientAnimationManager() {
