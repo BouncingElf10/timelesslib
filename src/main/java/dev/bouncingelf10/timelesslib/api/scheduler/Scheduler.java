@@ -138,6 +138,7 @@ public class Scheduler<T> {
         boolean cancel();
         boolean pause();
         boolean resume();
+        boolean pauseOrUnpause();
         boolean isCancelled();
         boolean isPaused();
         boolean isRunning();
@@ -248,6 +249,15 @@ public class Scheduler<T> {
             remainingNanosOnPause = -1;
             scheduleNext();
             return true;
+        }
+
+        @Override
+        public boolean pauseOrUnpause() {
+            if (!this.isPaused()) {
+                return this.pause();
+            } else {
+                return this.resume();
+            }
         }
 
         @Override public boolean isCancelled() { return cancelled.get(); }

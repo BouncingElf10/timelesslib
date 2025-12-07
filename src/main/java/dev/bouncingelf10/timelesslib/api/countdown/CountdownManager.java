@@ -252,6 +252,14 @@ public class CountdownManager<T> {
             return true;
         }
 
+        public boolean pauseOrUnpause() {
+            if (!this.isPaused()) {
+                return this.pause();
+            } else {
+                return this.resume();
+            }
+        }
+
         public boolean isCancelled() { return cancelled.get(); }
         public boolean isPaused() { return paused.get(); }
         public boolean isFinished() { return finished.get(); }
