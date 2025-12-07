@@ -12,12 +12,14 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
 
+import java.util.UUID;
+
 import static com.mojang.text2speech.Narrator.LOGGER;
 
 public class TimelessLibClient implements ClientModInitializer {
 	public static final Scheduler<Minecraft> clientScheduler = new Scheduler<>(TimelessFabricHelper::getClient);
 	public static final CountdownManager<Minecraft> clientCountdownManager = new CountdownManager<>(TimelessFabricHelper::getClient);
-	public static final ClientCooldownManager<Minecraft> clientCooldownManager = new ClientCooldownManager<>(TimelessFabricHelper::getClient, TimelessFabricHelper.getPlayerUuid());
+	public static final ClientCooldownManager<Minecraft> clientCooldownManager = new ClientCooldownManager<>(TimelessFabricHelper::getClient, UUID.randomUUID());
     public static final AnimationManager CLIENT_ANIMATION_MANAGER = new AnimationManager();
 
 	@Override
