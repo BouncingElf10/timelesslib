@@ -10,7 +10,7 @@ public final class TimeConversions {
 
     private static final String UNIT_PATTERN =
             "ns|μs|us|ms|s|sec|secs|second|seconds|"
-                    + "min|mins|minute|minutes|"
+                    + "m|min|mins|minute|minutes|"
                     + "h|hr|hrs|hour|hours|"
                     + "d|day|days|"
                     + "t|tick|ticks";
@@ -56,7 +56,7 @@ public final class TimeConversions {
                     case "μs", "us" -> DurationUnit.MICROSECONDS;
                     case "ms" -> DurationUnit.MILLISECONDS;
                     case "s", "sec", "secs", "second", "seconds" -> DurationUnit.SECONDS;
-                    case "min", "mins", "minute", "minutes" -> DurationUnit.MINUTES;
+                    case "m", "min", "mins", "minute", "minutes" -> DurationUnit.MINUTES;
                     case "h", "hr", "hrs", "hour", "hours" -> DurationUnit.HOURS;
                     case "d", "day", "days" -> DurationUnit.DAYS;
                     case "t", "tick", "ticks" -> DurationUnit.TICKS;

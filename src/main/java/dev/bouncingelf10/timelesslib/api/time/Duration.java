@@ -20,6 +20,10 @@ public final class Duration implements Comparable<Duration> {
         this.nanos = nanos;
     }
 
+    public static Duration of(java.time.Duration duration) {
+        return ofNanos(duration.toNanos());
+    }
+
     public static Duration of(long amount, DurationUnit unit) {
         return ofNanos(unit.toNanos(amount));
     }
