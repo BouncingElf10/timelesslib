@@ -20,7 +20,7 @@ public final class TimeConversions {
             Pattern.CASE_INSENSITIVE
     );
 
-    public static Duration parse(String durationStr) {
+    public static Duration parse(String durationStr) throws IllegalArgumentException {
         if (durationStr == null || durationStr.trim().isEmpty()) {
             throw new IllegalArgumentException("Duration string cannot be null or empty.");
         }
