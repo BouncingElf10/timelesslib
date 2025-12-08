@@ -1,6 +1,9 @@
 package dev.bouncingelf10.timelesslib.api.animation;
 
-import dev.bouncingelf10.timelesslib.TimelessClock;
+import dev.bouncingelf10.timelesslib.api.clock.TimeSource;
+import dev.bouncingelf10.timelesslib.api.clock.TimeSources;
+import dev.bouncingelf10.timelesslib.api.clock.TimelessClock;
+import dev.bouncingelf10.timelesslib.api.animation.keyframes.KeyframeDouble;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
 import dev.bouncingelf10.timelesslib.api.animation.channels.ChannelDouble;
 import dev.bouncingelf10.timelesslib.api.animation.channels.ChannelVec3;
@@ -25,7 +28,6 @@ public class AnimationTimeline {
 
     private Interpolation defaultInterpolation = Interpolation.EASE;
     private Easing defaultEasing = Easing.LINEAR;
-    private boolean computeTangents = false;
 
     private final List<Runnable> onStartCallbacks = new ArrayList<>();
     private final List<Runnable> onLoopCallbacks = new ArrayList<>();
@@ -34,7 +36,7 @@ public class AnimationTimeline {
     private double cachedDurationSeconds = 0.0;
     private boolean durationDirty = true;
 
-    private TimelessClock.TimeSource timeSource = TimelessClock.TimeSources.GAME_TIME;
+    private TimeSource timeSource = TimeSources.GAME_TIME;
     private long lastTimelineNanoTime = timeSource.now();
 
     public AnimationTimeline(String timelineId) {
@@ -47,12 +49,35 @@ public class AnimationTimeline {
     public AnimationTimeline pingPong(boolean enabled) { this.pingPong = enabled; return this; }
     public AnimationTimeline speed(double speed) { this.playbackSpeed = speed; return this; }
 
+    /**
+     * Sets the default interpolation for the timeline. <br>
+     * Note: Channels can override these settings and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelDouble} > {@link KeyframeDouble} (same for Vec3)
+     */
     public AnimationTimeline defaultInterpolation(Interpolation interpolation) { this.defaultInterpolation = interpolation; return this; }
+    /**
+     * Sets the default easing for the timeline. <br>
+     * Note: Channels can override these settings and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelDouble} > {@link KeyframeDouble} (same for Vec3)
+     */
     public AnimationTimeline defaultEasing(Easing easing) { this.defaultEasing = easing; return this; }
-    public AnimationTimeline computeTangents(boolean enabled) { this.computeTangents = enabled; return this; }
 
+    /**
+     * Adds a callback to be executed when the timeline starts playing.
+     * @param callback Callback to execute
+     */
     public AnimationTimeline onStart(Runnable callback) { this.onStartCallbacks.add(callback); return this; }
+
+    /**
+     * Adds a callback to be executed when the timeline loops.
+     * @param callback Callback to execute
+     */
     public AnimationTimeline onLoop(Runnable callback) { this.onLoopCallbacks.add(callback); return this; }
+
+    /**
+     * Adds a callback to be executed when the timeline finishes playing.
+     * @param callback Callback to execute
+     */
     public AnimationTimeline onFinish(Runnable callback) { this.onFinishCallbacks.add(callback); return this; }
 
     public boolean isPlaying() { return isPlaying; }
@@ -85,6 +110,9 @@ public class AnimationTimeline {
         }
     }
 
+    /**
+     * Toggles between playing and paused.
+     */
     public void pauseOrUnpause() {
         if (this.isPlaying()) {
             this.pause();
@@ -93,27 +121,48 @@ public class AnimationTimeline {
         }
     }
 
+    /**
+     * Seeks to the specified time in seconds.
+     * Note: "Seeking" to a time means that the timeline will jump to that time instantly.
+     */
     public void seek(double seconds) {
         currentTimeSeconds = Math.max(0.0, Math.min(getDurationSeconds(), seconds));
     }
 
+    /**
+     * Seeks to the specified duration.
+     * Note: "Seeking" to a time means that the timeline will jump to that time instantly.
+     */
     public void seek(Duration duration) {
         seek(duration.toNanos() / 1e9);
     }
 
+    /**
+     * Adds a new double channel to the timeline.
+     * @param name Channel name
+     * @return {@link ChannelDouble}
+     */
     public ChannelDouble channelDouble(String name) {
         markDurationDirty();
         return doubleChannels.computeIfAbsent(name, ChannelDouble::new);
     }
 
+    /**
+     * Adds a new Vec3 channel to the timeline.
+     * @param name Channel name
+     * @return {@link ChannelVec3}
+     */
     public ChannelVec3 channelVec3(String name) {
         markDurationDirty();
         return vec3Channels.computeIfAbsent(name, ChannelVec3::new);
     }
 
-    public Collection<ChannelDouble> doubleChannels() { return Collections.unmodifiableCollection(doubleChannels.values()); }
-    public Collection<ChannelVec3> vec3Channels() { return Collections.unmodifiableCollection(vec3Channels.values()); }
+    public Collection<ChannelDouble> getDoubleChannels() { return Collections.unmodifiableCollection(doubleChannels.values()); }
+    public Collection<ChannelVec3> getVec3Channels() { return Collections.unmodifiableCollection(vec3Channels.values()); }
 
+    /**
+     * You don't need to call this. Its taken care of by the {@link AnimationManager}.
+     */
     public void update(double deltaSeconds) {
         if (!isPlaying || isFinished || deltaSeconds <= 0) return;
 
@@ -155,10 +204,6 @@ public class AnimationTimeline {
         evaluateAll(currentTimeSeconds);
     }
 
-    public void update(Duration duration) {
-        update(duration.toNanos() / 1e9);
-    }
-
     private void evaluateAll(double timeSeconds) {
         for (ChannelDouble ch : doubleChannels.values())
             ch.evaluateAt(timeSeconds, defaultInterpolation, defaultEasing);
@@ -183,11 +228,16 @@ public class AnimationTimeline {
         double delta = (now - lastTimelineNanoTime) / 1e9;
         lastTimelineNanoTime = now;
         if (!isPlaying) return 0.0;
-        if (timeSource == TimelessClock.TimeSources.GAME_TIME && TimelessClock.isPaused()) return 0.0;
+        if (timeSource == TimeSources.GAME_TIME && TimelessClock.isPaused()) return 0.0;
         return delta * playbackSpeed;
     }
 
-    public AnimationTimeline setTimeSource(TimelessClock.TimeSource source) {
+    /**
+     * Sets the default {@link TimeSource} for the timeline. <br>
+     * Note: Channels can override these settings and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelDouble} > {@link KeyframeDouble} (same for Vec3)
+     */
+    public AnimationTimeline setTimeSource(TimeSource source) {
         this.timeSource = Objects.requireNonNull(source);
         this.lastTimelineNanoTime = source.now();
         return this;
@@ -197,12 +247,19 @@ public class AnimationTimeline {
 
     private void markDurationDirtyPublic() { markDurationDirty(); }
 
+    /**
+     * Binds a double consumer to the specified channel. <br>
+     * Normally you should call this in the channel itself {@link ChannelDouble#bind(Consumer)} and I advise you to not use this method.
+     */
     public AnimationTimeline bindDouble(String channelName, Consumer<Double> consumer) {
         channelDouble(channelName).bind(consumer);
         markDurationDirty();
         return this;
     }
-
+    /**
+     * Binds a Vec3 consumer to the specified channel. <br>
+     * Normally you should call this in the channel itself {@link ChannelVec3#bind(Consumer)} and I advise you to not use this method.
+     */
     public AnimationTimeline bindVec3(String channelName, Consumer<Vec3> consumer) {
         channelVec3(channelName).bind(consumer);
         markDurationDirty();

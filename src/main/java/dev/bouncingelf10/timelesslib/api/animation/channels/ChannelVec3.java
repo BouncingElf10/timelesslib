@@ -1,6 +1,7 @@
 package dev.bouncingelf10.timelesslib.api.animation.channels;
 
 import dev.bouncingelf10.timelesslib.api.animation.*;
+import dev.bouncingelf10.timelesslib.api.animation.keyframes.KeyframeDouble;
 import dev.bouncingelf10.timelesslib.api.animation.keyframes.KeyframeVec3;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
 import net.minecraft.world.phys.Vec3;
@@ -23,19 +24,46 @@ public class ChannelVec3 {
         return name;
     }
 
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     */
     public ChannelVec3 keyframe(double timeSeconds, Vec3 value) {
         return addKeyframe(KeyframeVec3.of(timeSeconds, value));
     }
-
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     * Also sets the easing for the keyframe. <br>
+     * Note: Keyframes can override all previous defaults and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelVec3} > {@link KeyframeVec3}
+     */
     public ChannelVec3 keyframe(double timeSeconds, Vec3 value, Easing easing) {
         return addKeyframe(KeyframeVec3.of(timeSeconds, value, easing));
     }
-
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     * Also sets the interpolation for the keyframe. <br>
+     * Note: Keyframes can override all previous defaults and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelVec3} > {@link KeyframeVec3}
+     */
     public ChannelVec3 keyframe(double timeSeconds, Vec3 value, Interpolation interpolation) {
         return addKeyframe(KeyframeVec3.of(timeSeconds, value, interpolation));
     }
-
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     * Also sets the interpolation and easing for the keyframe. <br>
+     * Note: Keyframes can override all previous defaults and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelVec3} > {@link KeyframeVec3}
+     */
     public ChannelVec3 keyframe(double timeSeconds, Vec3 value, Interpolation interpolation, Easing easing) {
+        return addKeyframe(KeyframeVec3.of(timeSeconds, value, easing, interpolation));
+    }
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     * Also sets the easing and interpolation for the keyframe. <br>
+     * Note: Keyframes can override all previous defaults and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelVec3} > {@link KeyframeVec3}
+     */
+    public ChannelVec3 keyframe(double timeSeconds, Vec3 value, Easing easing, Interpolation interpolation) {
         return addKeyframe(KeyframeVec3.of(timeSeconds, value, easing, interpolation));
     }
 
@@ -58,23 +86,39 @@ public class ChannelVec3 {
         double seconds = duration.toNanos() / 1e9;
         return keyframe(seconds, value, interpolation, easing);
     }
-
+    /**
+     * Adds a keyframe using a keyframe object. <br>
+     * I advise you use the provided methods to create keyframes. ({@link #keyframe(double, Vec3)}, etc.)
+     */
     public ChannelVec3 addKeyframe(KeyframeVec3 keyframe) {
         keyframes.add(keyframe);
         keyframes.sort(Comparator.comparingDouble(k -> k.timeSeconds));
         return this;
     }
-
+    /**
+     * Sets the default interpolation for the channel. <br>
+     * Note: Channel defaults override timeline defaults but can still be overwritten by keyframes following this hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelVec3} > {@link KeyframeVec3}
+     */
     public ChannelVec3 defaultInterpolation(Interpolation interpolation) {
         this.defaultInterpolation = Objects.requireNonNull(interpolation);
         return this;
     }
-
+    /**
+     * Sets the default easing for the channel. <br>
+     * Note: Channel defaults override timeline defaults but can still be overwritten by keyframes following this hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelVec3} > {@link KeyframeVec3}
+     */
     public ChannelVec3 defaultEasing(Easing easing) {
         this.defaultEasing = Objects.requireNonNull(easing);
         return this;
     }
-
+    /**
+     * Binds the channel to a consumer. <br>
+     * This is the way to assign a variable to the output of the channel. <br>
+     * E.g. {@code channel.bind(value -> System.out.println(value));} or<br>
+     * {@code channel.bind(myVariable::setValue);}
+     */
     public ChannelVec3 bind(Consumer<Vec3> consumer) {
         this.boundConsumer = Objects.requireNonNull(consumer);
         return this;
@@ -85,6 +129,9 @@ public class ChannelVec3 {
         return keyframes.getLast().timeSeconds;
     }
 
+    /**
+     * Evaluates the channel at the specified time in seconds. You mostly shouldn't call this method directly.
+     */
     public void evaluateAt(double timeSeconds, Interpolation timelineDefaultInterpolation, Easing timelineDefaultEasing) {
         if (keyframes.isEmpty()) {
             boundConsumer.accept(new Vec3(0.0, 0.0, 0.0));

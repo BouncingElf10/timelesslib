@@ -1,4 +1,4 @@
-package dev.bouncingelf10.timelesslib;
+package dev.bouncingelf10.timelesslib.api.clock;
 
 import dev.bouncingelf10.timelesslib.fabric.TimelessFabricHelper;
 
@@ -27,6 +27,11 @@ public final class TimelessClock {
         paused = false;
     }
 
+    /**
+     * Checks if the client is paused<br>
+     * Note: "paused" means that the game is frozen, not that the client is on the pause screen.
+     * So the client can never be "paused" if on a dedicated server.
+     */
     public static boolean isPaused() { return paused; }
     public static long deltaNanos() { return delta; }
     public static double deltaSeconds() { return delta / 1_000_000_000.0; }
@@ -34,15 +39,4 @@ public final class TimelessClock {
     public static long gameTime() { return gameNanos; }
     public static long realTime() { return System.nanoTime(); }
 
-    @FunctionalInterface
-    public interface TimeSource {
-        long now();
-    }
-
-    public static final class TimeSources {
-        public static final TimeSource GAME_TIME = TimelessClock::gameTime;
-        public static final TimeSource REAL_TIME = TimelessClock::realTime;
-
-        private TimeSources() {}
-    }
 }

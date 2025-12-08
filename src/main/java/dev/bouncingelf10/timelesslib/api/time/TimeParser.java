@@ -19,6 +19,13 @@ public class TimeParser {
             Pattern.CASE_INSENSITIVE
     );
 
+    /**
+     * Parses a duration string into a {@link Duration}.<br>
+     * Eg. "5h 30m 10s" -> 1530000000000 nanoseconds.
+     * @param durationStr Duration string to parse
+     * @return Parsed duration
+     * @throws IllegalArgumentException when the duration string is invalid
+     */
     public static Duration parse(String durationStr) throws IllegalArgumentException {
         if (durationStr == null || durationStr.trim().isEmpty()) {
             throw new IllegalArgumentException("Duration string cannot be null or empty.");

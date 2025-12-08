@@ -1,50 +1,56 @@
 package dev.bouncingelf10.timelesslib.api.cooldown;
 
+import dev.bouncingelf10.timelesslib.api.clock.TimeSource;
+import dev.bouncingelf10.timelesslib.api.countdown.Countdown;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
 
 import java.util.UUID;
 import java.util.function.Supplier;
-
+/**
+ * A Cooldown manager that tracks cooldowns for the local client
+ * @see AbstractCooldownManager
+ */
 public class ClientCooldownManager<T> extends AbstractCooldownManager<T> {
+    private final UUID localClient;
 
-    private final UUID localPlayer;
-
-    public ClientCooldownManager(Supplier<T> ctx, UUID localPlayer) {
+    public ClientCooldownManager(Supplier<T> ctx, UUID localClient) {
         super(ctx);
-        this.localPlayer = localPlayer;
+        this.localClient = localClient;
     }
 
     @Override
     protected UUID normalizeOwner(UUID owner) {
-        return localPlayer;
+        return localClient;
     }
 
     public Countdown start(String key, Duration duration) {
-        return super.start(localPlayer, key, duration);
+        return super.start(localClient, key, duration);
     }
 
     public Countdown startRealtime(String key, Duration duration) {
-        return super.startRealtime(localPlayer, key, duration);
+        return super.startRealtime(localClient, key, duration);
     }
 
-    public Countdown startIfAbsent(String key, Duration duration) {
-        return super.startIfAbsent(localPlayer, key, duration);
+    public Countdown startIfAbsent(String key, Duration duration, TimeSource timeSource) {
+        return super.startIfAbsent(localClient, key, duration, timeSource);
     }
 
     public boolean isReady(String key) {
-        return super.isReady(localPlayer, key);
+        return super.isReady(localClient, key);
     }
 
     public Duration remaining(String key) {
-        return super.remaining(localPlayer, key);
+        return super.remaining(localClient, key);
     }
 
     public void reset(String key) {
-        super.reset(localPlayer, key);
+        super.reset(localClient, key);
     }
 
     public void resetAll() {
-        super.resetAll(localPlayer);
+        super.resetAll(localClient);
     }
+
+    public UUID getLocalClient() { return localClient; }
 }
 

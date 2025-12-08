@@ -13,6 +13,12 @@ public class AnimationManager {
         return timeline;
     }
 
+    /**
+     * Gets a timeline by its ID. <br>
+     * Note: Returns an empty Optional if the timeline does not exist.
+     * @param id Timeline ID
+     * @return {@link AnimationTimeline} or empty
+     */
     public Optional<AnimationTimeline> getTimeline(String id) {
         return Optional.ofNullable(timelines.get(id));
     }

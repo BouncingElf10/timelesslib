@@ -22,19 +22,46 @@ public class ChannelDouble {
         return name;
     }
 
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     */
     public ChannelDouble keyframe(double timeSeconds, double value) {
         return addKeyframe(KeyframeDouble.of(timeSeconds, value));
     }
-
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     * Also sets the easing for the keyframe. <br>
+     * Note: Keyframes can override all previous defaults and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelDouble} > {@link KeyframeDouble}
+     */
     public ChannelDouble keyframe(double timeSeconds, double value, Easing easing) {
         return addKeyframe(KeyframeDouble.of(timeSeconds, value, easing));
     }
-
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     * Also sets the interpolation for the keyframe. <br>
+     * Note: Keyframes can override all previous defaults and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelDouble} > {@link KeyframeDouble}
+     */
     public ChannelDouble keyframe(double timeSeconds, double value, Interpolation interpolation) {
         return addKeyframe(KeyframeDouble.of(timeSeconds, value, interpolation));
     }
-
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     * Also sets the interpolation and easing for the keyframe. <br>
+     * Note: Keyframes can override all previous defaults and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelDouble} > {@link KeyframeDouble}
+     */
     public ChannelDouble keyframe(double timeSeconds, double value, Interpolation interpolation, Easing easing) {
+        return addKeyframe(KeyframeDouble.of(timeSeconds, value, easing, interpolation));
+    }
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     * Also sets the easing and interpolation for the keyframe. <br>
+     * Note: Keyframes can override all previous defaults and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelDouble} > {@link KeyframeDouble}
+     */
+    public ChannelDouble keyframe(double timeSeconds, double value, Easing easing, Interpolation interpolation) {
         return addKeyframe(KeyframeDouble.of(timeSeconds, value, easing, interpolation));
     }
 
@@ -58,22 +85,40 @@ public class ChannelDouble {
         return keyframe(seconds, value, interpolation, easing);
     }
 
+    /**
+     * Adds a keyframe using a keyframe object. <br>
+     * I advise you use the provided methods to create keyframes. ({@link #keyframe(double, double)}, etc.)
+     */
     public ChannelDouble addKeyframe(KeyframeDouble keyframe) {
         keyframes.add(keyframe);
         keyframes.sort(Comparator.comparingDouble(k -> k.timeSeconds));
         return this;
     }
-
+    /**
+     * Sets the default interpolation for the channel. <br>
+     * Note: Channel defaults override timeline defaults but can still be overwritten by keyframes following this hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelDouble} > {@link KeyframeDouble}
+     */
     public ChannelDouble defaultInterpolation(Interpolation interpolation) {
         this.defaultInterpolation = Objects.requireNonNull(interpolation);
         return this;
     }
-
+    /**
+     * Sets the default easing for the channel. <br>
+     * Note: Channel defaults override timeline defaults but can still be overwritten by keyframes following this hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelDouble} > {@link KeyframeDouble}
+     */
     public ChannelDouble defaultEasing(Easing easing) {
         this.defaultEasing = Objects.requireNonNull(easing);
         return this;
     }
 
+    /**
+     * Binds the channel to a consumer. <br>
+     * This is the way to assign a variable to the output of the channel. <br>
+     * E.g. {@code channel.bind(value -> System.out.println(value));} or<br>
+     * {@code channel.bind(myVariable::setValue);}
+     */
     public ChannelDouble bind(Consumer<Double> consumer) {
         this.boundConsumer = Objects.requireNonNull(consumer);
         return this;
@@ -84,6 +129,9 @@ public class ChannelDouble {
         return keyframes.getLast().timeSeconds;
     }
 
+    /**
+     * Evaluates the channel at the specified time in seconds. You mostly shouldn't call this method directly.
+     */
     public void evaluateAt(double timeSeconds, Interpolation timelineDefaultInterpolation, Easing timelineDefaultEasing) {
         if (keyframes.isEmpty()) {
             boundConsumer.accept(0.0);

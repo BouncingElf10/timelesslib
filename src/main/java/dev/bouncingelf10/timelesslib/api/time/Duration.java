@@ -105,7 +105,7 @@ public final class Duration implements Comparable<Duration> {
         return "Duration: " + nanos + " ns";
     }
 
-    public String toString(TimeFormatter.TimeFormat format) {
+    public String toString(TimeFormat format) {
         return TimeFormatter.format(nanos, format);
     }
 
