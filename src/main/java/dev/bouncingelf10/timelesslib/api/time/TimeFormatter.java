@@ -8,6 +8,13 @@ import java.util.concurrent.TimeUnit;
 public final class TimeFormatter {
     private TimeFormatter() {}
 
+    /**
+     * Formats nanoseconds using a {@link TimeFormat}.
+     *
+     * @param nanos duration in nanoseconds
+     * @param format output format
+     * @return formatted string
+     */
     public static String format(long nanos, TimeFormat format) {
         return format.apply(nanos);
     }
@@ -28,6 +35,9 @@ public final class TimeFormatter {
         return format.apply(anchor.elapsedNanos());
     }
 
+    /**
+     * Compact format such as {@code "1d 2h 3m 4s"} or {@code "3s 250ms"}.
+     */
     public static String formatCompact(long nanos, DurationUnit minUnit) {
         TimeComponents components = new TimeComponents(nanos);
         StringBuilder output = new StringBuilder();
@@ -45,6 +55,9 @@ public final class TimeFormatter {
         return output.toString().trim();
     }
 
+    /**
+     * Verbose format such as {@code "2 days, 3 hours and 4 minutes"} or {@code "2 days, 3 hours, 4 minutes"}.
+     */
     public static String formatVerbose(long nanos, String conjunction) {
         TimeComponents components = new TimeComponents(nanos);
         List<String> timeParts = new ArrayList<>();
@@ -72,6 +85,9 @@ public final class TimeFormatter {
         return output.toString();
     }
 
+    /**
+     * Digital format such as {@code "01:22:05"} or {@code "00:10.532"}.
+     */
     public static String formatDigital(long nanos, boolean includeMillis) {
         TimeComponents components = new TimeComponents(nanos);
 
@@ -90,6 +106,9 @@ public final class TimeFormatter {
                 : String.format("%02d:%02d", components.minutes, components.seconds);
     }
 
+    /**
+     * ISO-8601 duration format such as {@code "PT30S"} or {@code "P2DT3H"}.
+     */
     public static String formatISO8601(long nanos) {
         TimeComponents components = new TimeComponents(nanos);
 
@@ -116,6 +135,9 @@ public final class TimeFormatter {
         return isoOutput.toString();
     }
 
+    /**
+     * Gets a short suffix for a duration unit.
+     */
     private static String getUnitSuffix(DurationUnit unit) {
         return switch (unit) {
             case DAYS -> "d";
@@ -129,7 +151,7 @@ public final class TimeFormatter {
         };
     }
 
-    private static class TimeComponents {
+    static class TimeComponents {
         final long days;
         final int hours;
         final int minutes;
@@ -148,84 +170,5 @@ public final class TimeFormatter {
             this.seconds = (int) (remainingSeconds % 60L);
             this.millis = (int) ((nanos % 1_000_000_000L) / 1_000_000L);
         }
-    }
-
-    public enum TimeFormat {
-        COMPACT {
-            @Override public String apply(long nanos) {
-                return formatCompact(nanos, DurationUnit.SECONDS);
-            }
-        },
-        COMPACT_MILLIS {
-            @Override public String apply(long nanos) {
-                return formatCompact(nanos, DurationUnit.MILLISECONDS);
-            }
-        },
-        VERBOSE {
-            @Override public String apply(long nanos) {
-                return formatVerbose(nanos, "and");
-            }
-        },
-        VERBOSE_SIMPLE {
-            @Override public String apply(long nanos) {
-                return formatVerbose(nanos, "");
-            }
-        },
-        DIGITAL {
-            @Override public String apply(long nanos) {
-                return formatDigital(nanos, false);
-            }
-        },
-        DIGITAL_MILLIS {
-            @Override public String apply(long nanos) {
-                return formatDigital(nanos, true);
-            }
-        },
-        MINIMAL {
-            @Override public String apply(long nanos) {
-                TimeComponents components = new TimeComponents(nanos);
-                if (components.days > 0) return components.days + "d";
-                if (components.hours > 0) return components.hours + "h";
-                if (components.minutes > 0) return components.minutes + "m";
-                if (components.seconds > 0) return components.seconds + "s";
-                return components.millis + "ms";
-            }
-        },
-        MINIMAL_TWO {
-            @Override public String apply(long nanos) {
-                TimeComponents components = new TimeComponents(nanos);
-                List<String> firstTwoParts = new ArrayList<>();
-
-                if (components.days > 0) firstTwoParts.add(components.days + "d");
-                if (components.hours > 0) firstTwoParts.add(components.hours + "h");
-                if (components.minutes > 0) firstTwoParts.add(components.minutes + "m");
-                if (components.seconds > 0) firstTwoParts.add(components.seconds + "s");
-                if (components.millis > 0) firstTwoParts.add(components.millis + "ms");
-
-                if (firstTwoParts.isEmpty()) return "0ms";
-                if (firstTwoParts.size() == 1) return firstTwoParts.get(0);
-                return firstTwoParts.get(0) + " " + firstTwoParts.get(1);
-            }
-        },
-        ISO_8601 {
-            @Override public String apply(long nanos) {
-                return formatISO8601(nanos);
-            }
-        },
-        DEBUG {
-            @Override public String apply(long nanos) {
-                TimeComponents components = new TimeComponents(nanos);
-                long microseconds = (nanos % 1_000_000_000L) / 1_000L;
-                long remainingNanos = nanos % 1_000L;
-
-                return String.format(
-                        "Days: %d, Hours: %d, Minutes: %d, Seconds: %d, Milliseconds: %d, Microseconds: %d, Nanoseconds: %d",
-                        components.days, components.hours, components.minutes, components.seconds,
-                        components.millis, microseconds, remainingNanos
-                );
-            }
-        };
-
-        public abstract String apply(long nanos);
     }
 }

@@ -1,5 +1,6 @@
 package dev.bouncingelf10.timelesslib.api.scheduler;
 
+import dev.bouncingelf10.timelesslib.TimelessLib;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
 
 import java.util.*;
@@ -48,22 +49,55 @@ public class Scheduler<T> {
         this.executor.setRemoveOnCancelPolicy(true);
     }
 
+    /**
+     * Schedules a task to run after the specified delay.
+     * @param delay Delay before running the task
+     * @param task Task to run
+     * @return {@link TaskHandle}
+     */
     public TaskHandle after(Duration delay, Consumer<T> task) {
         return scheduleInternal(null, delay, null, () -> task.accept(contextProvider.get()), false, false);
     }
 
+    /**
+     * Schedules a task to run after the specified delay.
+     * @param id Unique ID for the task
+     * @param delay Delay before running the task
+     * @param task Task to run
+     * @return {@link TaskHandle}
+     * @throws IllegalArgumentException if a task with the specified ID already exists
+     */
     public TaskHandle after(String id, Duration delay, Consumer<T> task) {
         return scheduleInternal(id, delay, null, () -> task.accept(contextProvider.get()), false, false);
     }
 
+    /**
+     * Schedules a repeating task to run at the specified interval.
+     * @param period Interval between runs
+     * @param task Task to run
+     * @return {@link TaskHandle}
+     */
     public TaskHandle every(Duration period, Consumer<T> task) {
         return scheduleInternal(null, period, period, () -> task.accept(contextProvider.get()), true, false);
     }
 
+    /**
+     * Schedules a repeating task to run at the specified interval, with a fixed delay between runs.<br>
+     * E.g. {@link #every(Duration, Consumer)} will run the interval after the task has finished executing, whereas this method will run the interval immediately after the task starts executing.
+     * @param period
+     * @param task
+     * @return {@link TaskHandle}
+     */
     public TaskHandle everyFixedRate(Duration period, Consumer<T> task) {
         return scheduleInternal(null, period, period, () -> task.accept(contextProvider.get()), true, true);
     }
 
+    /**
+     * Schedules a task to run after the specified delay, returning a {@link CompletableFuture} that completes when the task has finished executing.
+     * @param delay Delay before running the task
+     * @param task Task to run
+     * @return {@link CompletableFuture}
+     */
     public CompletableFuture<Void> afterAsync(Duration delay, Consumer<T> task) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         after(delay, ctx -> {
@@ -77,12 +111,18 @@ public class Scheduler<T> {
         return future;
     }
 
+    /**
+     * If you're getting the scheduler through {@link TimelessLib#getServerScheduler()} or the client counterpart you should NOT call this method.
+     */
     public void shutdown() {
         tasks.values().forEach(ScheduledTask::cancelSilently);
         tasks.clear();
         executor.shutdownNow();
     }
 
+    /**
+     * If you're getting the scheduler through {@link TimelessLib#getServerScheduler()} or the client counterpart you should NOT call this method.
+     */
     public void shutdownGracefully(long timeout, TimeUnit unit) throws InterruptedException {
         tasks.values().forEach(ScheduledTask::cancelSilently);
         tasks.clear();

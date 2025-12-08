@@ -4,6 +4,13 @@ public final class TimeConversions {
 
     private TimeConversions() {}
 
+    /**
+     * Convert between time units.
+     * @param amount Amount to convert
+     * @param from Source unit
+     * @param to Target unit
+     * @return Converted amount
+     */
     public static double convert(double amount, DurationUnit from, DurationUnit to) {
         return from.to(amount, to);
     }
