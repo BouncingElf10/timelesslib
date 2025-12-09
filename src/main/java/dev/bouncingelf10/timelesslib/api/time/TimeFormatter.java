@@ -48,7 +48,7 @@ public final class TimeFormatter {
         if (components.seconds > 0) output.append(components.seconds).append("s ");
         if (components.millis > 0) output.append(components.millis).append("ms ");
 
-        if (output.isEmpty()) {
+        if (output.length() == 0) {
             output.append("0").append(getUnitSuffix(minUnit));
         }
 
@@ -139,16 +139,19 @@ public final class TimeFormatter {
      * Gets a short suffix for a duration unit.
      */
     private static String getUnitSuffix(DurationUnit unit) {
-        return switch (unit) {
-            case DAYS -> "d";
-            case HOURS -> "h";
-            case MINUTES -> "m";
-            case SECONDS -> "s";
-            case MILLISECONDS -> "ms";
-            case MICROSECONDS -> "μs";
-            case NANOSECONDS -> "ns";
-            case TICKS -> "t";
-        };
+        String suffix;
+        switch (unit) {
+            case DAYS: suffix = "d"; break;
+            case HOURS: suffix = "h"; break;
+            case MINUTES: suffix = "m"; break;
+            case SECONDS: suffix = "s"; break;
+            case MILLISECONDS: suffix = "ms"; break;
+            case MICROSECONDS: suffix = "μs"; break;
+            case NANOSECONDS: suffix = "ns"; break;
+            case TICKS: suffix = "t"; break;
+            default: suffix = "UNIT NOT FOUND";
+        }
+        return suffix;
     }
 
     static class TimeComponents {

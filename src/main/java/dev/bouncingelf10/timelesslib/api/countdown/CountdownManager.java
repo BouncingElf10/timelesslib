@@ -48,7 +48,7 @@ public class CountdownManager<T> {
                 try { executeMethod.invoke(ctx, runnable); }
                 catch (RuntimeException re) { throw re; }
                 catch (Exception e) {
-                    TimelessLib.LOGGER.error("Failed to dispatch task to main thread", e);
+                    TimelessLib.LOGGER.severe("Failed to dispatch task to main thread\n" + e);
                     throw new RuntimeException(e);
                 }
             };
@@ -117,7 +117,7 @@ public class CountdownManager<T> {
         activeCountdowns.values().forEach(Countdown::cancelSilently);
         executor.shutdown();
         if (!executor.awaitTermination(timeout, unit)) {
-            TimelessLib.LOGGER.warn("CountdownManager did not shutdown gracefully within the timeout");
+            TimelessLib.LOGGER.warning("CountdownManager did not shutdown gracefully within the timeout");
             executor.shutdownNow();
         }
     }

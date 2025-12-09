@@ -167,13 +167,14 @@ public class ChannelVec3 {
 
         Vec3 outputValue;
         switch (segmentInterpolation) {
-            case STEP -> outputValue = leftFrame.value;
-            case LINEAR -> outputValue = lerp(leftFrame.value, rightFrame.value, t);
-            case EASE -> {
+            case STEP: outputValue = leftFrame.value; break;
+            case LINEAR: outputValue = lerp(leftFrame.value, rightFrame.value, t); break;
+            case EASE: {
                 double easedT = easing == null ? Easing.LINEAR.apply(t) : easing.apply(t);
                 outputValue = lerp(leftFrame.value, rightFrame.value, easedT);
+                break;
             }
-            case CATMULL -> {
+            case CATMULL: {
                 int i = insertionPoint - 1;
                 int size = keyframes.size();
 
@@ -191,8 +192,9 @@ public class ChannelVec3 {
                         catmullRom(p0.y, p1.y, p2.y, p3.y, t),
                         catmullRom(p0.z, p1.z, p2.z, p3.z, t)
                 );
+                break;
             }
-            default -> throw new IllegalStateException("Invalid interpolation type: " + segmentInterpolation);
+            default: throw new IllegalStateException("Invalid interpolation type: " + segmentInterpolation);
         }
 
         boundConsumer.accept(outputValue);

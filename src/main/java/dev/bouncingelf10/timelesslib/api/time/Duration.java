@@ -94,7 +94,10 @@ public final class Duration implements Comparable<Duration> {
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof Duration d && d.nanos == nanos;
+        if (obj instanceof Duration) {
+            return ((Duration) obj).nanos == nanos;
+        }
+        return false;
     }
 
     @Override
@@ -110,13 +113,15 @@ public final class Duration implements Comparable<Duration> {
     }
 
     private static long round(double value, RoundingMode mode) {
-        return switch (mode) {
-            case FLOOR -> (long) Math.floor(value);
-            case CEILING -> (long) Math.ceil(value);
-            case HALF_UP -> Math.round(value);
-            case DOWN -> (long) (value >= 0 ? Math.floor(value) : Math.ceil(value));
-            case UP -> (long) (value >= 0 ? Math.ceil(value) : Math.floor(value));
-            default -> Math.round(value);
+        long rounded;
+        switch (mode) {
+            case FLOOR: rounded = (long) Math.floor(value); break;
+            case CEILING: rounded = (long) Math.ceil(value); break;
+            case HALF_UP: rounded = Math.round(value); break;
+            case DOWN: rounded = (long) (value >= 0 ? Math.floor(value) : Math.ceil(value)); break;
+            case UP: rounded = (long) (value >= 0 ? Math.ceil(value) : Math.floor(value)); break;
+            default: rounded = Math.round(value); break;
         };
+        return rounded;
     }
 }

@@ -167,13 +167,14 @@ public class ChannelDouble {
 
         double outputValue;
         switch (segmentInterpolation) {
-            case STEP -> outputValue = leftFrame.value;
-            case LINEAR -> outputValue = lerp(leftFrame.value, rightFrame.value, t);
-            case EASE -> {
+            case STEP: outputValue = leftFrame.value; break;
+            case LINEAR: outputValue = lerp(leftFrame.value, rightFrame.value, t); break;
+            case EASE: {
                 double easedT = easing == null ? Easing.LINEAR.apply(t) : easing.apply(t);
                 outputValue = lerp(leftFrame.value, rightFrame.value, easedT);
+                break;
             }
-            case CATMULL -> {
+            case CATMULL: {
                 int i = insertionPoint - 1;
                 int size = keyframes.size();
 
@@ -187,8 +188,9 @@ public class ChannelDouble {
                 double p3 = keyframes.get(i3).value;
 
                 outputValue = catmullRom(p0, p1, p2, p3, t);
+                break;
             }
-            default -> throw new IllegalStateException("Invalid interpolation type: " + segmentInterpolation);
+            default: throw new IllegalStateException("Invalid interpolation type: " + segmentInterpolation);
         }
 
         boundConsumer.accept(outputValue);
