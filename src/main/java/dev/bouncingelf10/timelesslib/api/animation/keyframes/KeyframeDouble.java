@@ -8,7 +8,6 @@ public class KeyframeDouble {
     public final double value;
     public final Interpolation interpolation;
     public final Easing easing;
-    public double tangent = 0.0;
 
     public KeyframeDouble(double timeSeconds, double value, Interpolation interpolation, Easing easing) {
         if (timeSeconds < 0) throw new IllegalArgumentException("timeSeconds < 0");

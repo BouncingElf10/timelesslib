@@ -1,6 +1,7 @@
 package dev.bouncingelf10.timelesslib.fabric;
 
 import dev.bouncingelf10.timelesslib.TimelessLib;
+import dev.bouncingelf10.timelesslib.api.time.TimeFormat;
 import dev.bouncingelf10.timelesslib.api.time.TimeFormatter;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
@@ -42,11 +43,11 @@ public class TimelessFabricHelper {
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
 
-        String msg = TimeFormatter.format(nanosLeft, TimeFormatter.TimeFormat.VERBOSE_SIMPLE) + " left";
+        String msg = TimeFormatter.format(nanosLeft, TimeFormat.VERBOSE_SIMPLE) + " left";
         client.player.displayClientMessage(Component.literal(msg), true);
     }
 
-    public static void clientDisplayToUser(long nanosLeft, TimeFormatter.TimeFormat fmt,
+    public static void clientDisplayToUser(long nanosLeft, TimeFormat fmt,
                                            String prefix, String suffix) {
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
@@ -67,11 +68,11 @@ public class TimelessFabricHelper {
     public static void serverDisplayToUser(long nanosLeft, ServerPlayer player) {
         if (!TimelessLib.isServerInitialized()) return;
 
-        String msg = TimeFormatter.format(nanosLeft, TimeFormatter.TimeFormat.VERBOSE_SIMPLE) + " left";
+        String msg = TimeFormatter.format(nanosLeft, TimeFormat.VERBOSE_SIMPLE) + " left";
         player.displayClientMessage(Component.literal(msg), true);
     }
 
-    public static void serverDisplayToUser(long nanosLeft, ServerPlayer player, TimeFormatter.TimeFormat fmt, String prefix, String suffix) {
+    public static void serverDisplayToUser(long nanosLeft, ServerPlayer player, TimeFormat fmt, String prefix, String suffix) {
         if (!TimelessLib.isServerInitialized()) return;
 
         String msg = prefix + TimeFormatter.format(nanosLeft, fmt) + suffix;
@@ -90,7 +91,7 @@ public class TimelessFabricHelper {
         }
     }
 
-    public static void serverDisplayNearbyUsers(long nanosLeft, Vec3 pos, float radius, TimeFormatter.TimeFormat fmt, String prefix, String suffix) {
+    public static void serverDisplayNearbyUsers(long nanosLeft, Vec3 pos, float radius, TimeFormat fmt, String prefix, String suffix) {
         if (!TimelessLib.isServerInitialized()) return;
 
         PlayerList list = TimelessLib.getServer().getPlayerList();
@@ -111,7 +112,7 @@ public class TimelessFabricHelper {
         }
     }
 
-    public static void serverDisplayAllUsers(long nanosLeft, TimeFormatter.TimeFormat fmt, String prefix, String suffix) {
+    public static void serverDisplayAllUsers(long nanosLeft, TimeFormat fmt, String prefix, String suffix) {
         if (!TimelessLib.isServerInitialized()) return;
 
         PlayerList list = TimelessLib.getServer().getPlayerList();

@@ -2,6 +2,9 @@ package dev.bouncingelf10.timelesslib.api.animation;
 
 import java.util.function.DoubleUnaryOperator;
 
+/**
+ * A collection of easing functions taken from <a href="https://easings.net/">easings.net</a>.
+ */
 public abstract class Easing {
     private final DoubleUnaryOperator operator;
 
