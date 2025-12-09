@@ -25,7 +25,7 @@ public class TimelessLib implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		LOGGER.info("TimelessLib Sever Initialising");
+		LOGGER.info("TimelessLib Initialising");
 
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			LOGGER.info("TimelessLib Initialised for Server");
