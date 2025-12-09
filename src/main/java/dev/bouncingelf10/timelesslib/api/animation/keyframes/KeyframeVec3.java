@@ -9,7 +9,6 @@ public class KeyframeVec3 {
     public final Vec3 value;
     public final Interpolation interpolation;
     public final Easing easing;
-    public Vec3 tangent = Vec3.ZERO;
 
     public KeyframeVec3(double timeSeconds, Vec3 value, Interpolation interpolation, Easing easing) {
         if (timeSeconds < 0) throw new IllegalArgumentException("timeSeconds < 0");

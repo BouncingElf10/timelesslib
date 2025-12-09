@@ -1,6 +1,5 @@
 package dev.bouncingelf10.timelesslib.api.animation.channels;
 
-import dev.bouncingelf10.timelesslib.TimelessClock;
 import dev.bouncingelf10.timelesslib.api.animation.*;
 import dev.bouncingelf10.timelesslib.api.animation.keyframes.KeyframeDouble;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
@@ -11,17 +10,9 @@ import java.util.function.Consumer;
 public class ChannelDouble {
     private final String name;
     private final List<KeyframeDouble> keyframes = new ArrayList<>();
-    private Interpolation defaultInterpolation = Interpolation.EASE;
-    private Easing defaultEasing = Easing.LINEAR;
+    private Interpolation defaultInterpolation = null;
+    private Easing defaultEasing = null;
     private Consumer<Double> boundConsumer = value -> {};
-    private TimelessClock.TimeSource timeSource = TimelessClock.TimeSources.GAME_TIME;
-    private boolean useTimelineTime = true;
-
-    private double tension = 0.0;
-    private double continuity = 0.0;
-    private double bias = 0.0;
-
-    private boolean tangentsDirty = true;
 
     public ChannelDouble(String name) {
         this.name = Objects.requireNonNull(name);
@@ -31,19 +22,46 @@ public class ChannelDouble {
         return name;
     }
 
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     */
     public ChannelDouble keyframe(double timeSeconds, double value) {
         return addKeyframe(KeyframeDouble.of(timeSeconds, value));
     }
-
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     * Also sets the easing for the keyframe. <br>
+     * Note: Keyframes can override all previous defaults and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelDouble} > {@link KeyframeDouble}
+     */
     public ChannelDouble keyframe(double timeSeconds, double value, Easing easing) {
         return addKeyframe(KeyframeDouble.of(timeSeconds, value, easing));
     }
-
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     * Also sets the interpolation for the keyframe. <br>
+     * Note: Keyframes can override all previous defaults and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelDouble} > {@link KeyframeDouble}
+     */
     public ChannelDouble keyframe(double timeSeconds, double value, Interpolation interpolation) {
         return addKeyframe(KeyframeDouble.of(timeSeconds, value, interpolation));
     }
-
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     * Also sets the interpolation and easing for the keyframe. <br>
+     * Note: Keyframes can override all previous defaults and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelDouble} > {@link KeyframeDouble}
+     */
     public ChannelDouble keyframe(double timeSeconds, double value, Interpolation interpolation, Easing easing) {
+        return addKeyframe(KeyframeDouble.of(timeSeconds, value, easing, interpolation));
+    }
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     * Also sets the easing and interpolation for the keyframe. <br>
+     * Note: Keyframes can override all previous defaults and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelDouble} > {@link KeyframeDouble}
+     */
+    public ChannelDouble keyframe(double timeSeconds, double value, Easing easing, Interpolation interpolation) {
         return addKeyframe(KeyframeDouble.of(timeSeconds, value, easing, interpolation));
     }
 
@@ -67,120 +85,82 @@ public class ChannelDouble {
         return keyframe(seconds, value, interpolation, easing);
     }
 
+    /**
+     * Adds a keyframe using a keyframe object. <br>
+     * I advise you use the provided methods to create keyframes. ({@link #keyframe(double, double)}, etc.)
+     */
     public ChannelDouble addKeyframe(KeyframeDouble keyframe) {
         keyframes.add(keyframe);
         keyframes.sort(Comparator.comparingDouble(k -> k.timeSeconds));
-        tangentsDirty = true;
         return this;
     }
-
-    public ChannelDouble timeSource(TimelessClock.TimeSource source) {
-        this.useTimelineTime = false;
-        this.timeSource = source;
-        return this;
-    }
-
+    /**
+     * Sets the default interpolation for the channel. <br>
+     * Note: Channel defaults override timeline defaults but can still be overwritten by keyframes following this hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelDouble} > {@link KeyframeDouble}
+     */
     public ChannelDouble defaultInterpolation(Interpolation interpolation) {
         this.defaultInterpolation = Objects.requireNonNull(interpolation);
         return this;
     }
-
+    /**
+     * Sets the default easing for the channel. <br>
+     * Note: Channel defaults override timeline defaults but can still be overwritten by keyframes following this hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelDouble} > {@link KeyframeDouble}
+     */
     public ChannelDouble defaultEasing(Easing easing) {
         this.defaultEasing = Objects.requireNonNull(easing);
         return this;
     }
 
+    /**
+     * Binds the channel to a consumer. <br>
+     * This is the way to assign a variable to the output of the channel. <br>
+     * E.g. {@code channel.bind(value -> System.out.println(value));} or<br>
+     * {@code channel.bind(myVariable::setValue);}
+     */
     public ChannelDouble bind(Consumer<Double> consumer) {
         this.boundConsumer = Objects.requireNonNull(consumer);
         return this;
     }
 
-    public ChannelDouble setTCB(double tension, double continuity, double bias) {
-        this.tension = tension;
-        this.continuity = continuity;
-        this.bias = bias;
-        tangentsDirty = true;
-        return this;
-    }
-
     public double computeDurationSeconds() {
         if (keyframes.isEmpty()) return 0.0;
-        return keyframes.get(keyframes.size() - 1).timeSeconds;
+        return keyframes.get(keyframes.size()-1).timeSeconds;
     }
 
-    public void computeTangentsIfNeeded() {
-        if (!tangentsDirty) return;
-        tangentsDirty = false;
-
-        int frameCount = keyframes.size();
-        if (frameCount == 0) return;
-        if (frameCount == 1) {
-            keyframes.get(0).tangent = 0.0;
-            return;
-        }
-
-        for (int i = 0; i < frameCount; i++) {
-            KeyframeDouble previous = (i > 0) ? keyframes.get(i - 1) : keyframes.get(0);
-            KeyframeDouble current = keyframes.get(i);
-            KeyframeDouble next = (i < frameCount - 1) ? keyframes.get(i + 1) : keyframes.get(i);
-
-            double deltaTime = next.timeSeconds - previous.timeSeconds;
-            if (deltaTime == 0.0) {
-                current.tangent = 0.0;
-                continue;
-            }
-
-            double deltaValue = next.value - previous.value;
-
-            if (tension == 0.0 && continuity == 0.0 && bias == 0.0) {
-                current.tangent = 0.5 * (deltaValue / deltaTime);
-            } else {
-                double deltaTimePrev = current.timeSeconds - previous.timeSeconds;
-                double deltaTimeNext = next.timeSeconds - current.timeSeconds;
-                double deltaValuePrev = current.value - previous.value;
-                double deltaValueNext = next.value - current.value;
-
-                double derivativePrev = deltaTimePrev > 0 ? deltaValuePrev / deltaTimePrev : 0.0;
-                double derivativeNext = deltaTimeNext > 0 ? deltaValueNext / deltaTimeNext : 0.0;
-
-                current.tangent = (1 - tension) * ((1 + continuity) * (1 + bias) * derivativePrev / 2.0
-                        + (1 - continuity) * (1 - bias) * derivativeNext / 2.0);
-            }
-        }
-    }
-
-    public void evaluateAt(double timeSeconds, Interpolation timelineDefaultInterpolation, Easing timelineDefaultEasing, boolean computeTangentsForTimeline) {
-        double effectiveTime = useTimelineTime ? timeSeconds : (timeSource.now() / 1e9);
-
+    /**
+     * Evaluates the channel at the specified time in seconds. You mostly shouldn't call this method directly.
+     */
+    public void evaluateAt(double timeSeconds, Interpolation timelineDefaultInterpolation, Easing timelineDefaultEasing) {
         if (keyframes.isEmpty()) {
             boundConsumer.accept(0.0);
             return;
         }
 
-        if (effectiveTime <= keyframes.get(0).timeSeconds) {
+        if (timeSeconds <= keyframes.get(0).timeSeconds) {
             boundConsumer.accept(keyframes.get(0).value);
             return;
         }
 
-        if (effectiveTime >= keyframes.get(keyframes.size() - 1).timeSeconds) {
-            boundConsumer.accept(keyframes.get(keyframes.size() - 1).value);
+        if (timeSeconds >= keyframes.get(keyframes.size()-1).timeSeconds) {
+            boundConsumer.accept(keyframes.get(keyframes.size()-1).value);
             return;
         }
 
-        KeyframeDouble leftFrame = keyframes.get(0);
-        KeyframeDouble rightFrame = keyframes.get(keyframes.size() - 1);
-        for (int i = 0; i < keyframes.size() - 1; i++) {
-            KeyframeDouble frameA = keyframes.get(i);
-            KeyframeDouble frameB = keyframes.get(i + 1);
-            if (effectiveTime >= frameA.timeSeconds && effectiveTime <= frameB.timeSeconds) {
-                leftFrame = frameA;
-                rightFrame = frameB;
-                break;
-            }
+        int index = Collections.binarySearch(keyframes, KeyframeDouble.of(timeSeconds, 0), Comparator.comparingDouble(k -> k.timeSeconds));
+        if (index >= 0) {
+            KeyframeDouble exact = keyframes.get(index);
+            boundConsumer.accept(exact.value);
+            return;
         }
+        int insertionPoint = -(index + 1);
+
+        KeyframeDouble leftFrame = keyframes.get(insertionPoint - 1);
+        KeyframeDouble rightFrame = keyframes.get(insertionPoint);
 
         double span = rightFrame.timeSeconds - leftFrame.timeSeconds;
-        double t = span == 0.0 ? 0.0 : (effectiveTime - leftFrame.timeSeconds) / span;
+        double t = span == 0.0 ? 0.0 : (timeSeconds - leftFrame.timeSeconds) / span;
 
         Interpolation segmentInterpolation = leftFrame.interpolation != null ? leftFrame.interpolation : (defaultInterpolation != null ? defaultInterpolation : timelineDefaultInterpolation);
         Easing easing = leftFrame.easing != null ? leftFrame.easing : (defaultEasing != null ? defaultEasing : timelineDefaultEasing);
@@ -193,22 +173,31 @@ public class ChannelDouble {
                 double easedT = easing == null ? Easing.LINEAR.apply(t) : easing.apply(t);
                 outputValue = lerp(leftFrame.value, rightFrame.value, easedT);
             }
-            case HERMITE -> {
-                if (computeTangentsForTimeline) computeTangentsIfNeeded();
-                double m0 = leftFrame.tangent * span;
-                double m1 = rightFrame.tangent * span;
+            case CATMULL -> {
+                int i = insertionPoint - 1;
+                int size = keyframes.size();
 
-                double h00 = 2 * t * t * t - 3 * t * t + 1;
-                double h10 = t * t * t - 2 * t * t + t;
-                double h01 = -2 * t * t * t + 3 * t * t;
-                double h11 = t * t * t - t * t;
+                int i0 = Math.max(0, i - 1);
+                int i2 = i + 1;
+                int i3 = Math.min(size - 1, i + 2);
 
-                outputValue = h00 * leftFrame.value + h10 * m0 + h01 * rightFrame.value + h11 * m1;
+                double p0 = keyframes.get(i0).value;
+                double p1 = keyframes.get(i).value;
+                double p2 = keyframes.get(i2).value;
+                double p3 = keyframes.get(i3).value;
+
+                outputValue = catmullRom(p0, p1, p2, p3, t);
             }
             default -> throw new IllegalStateException("Invalid interpolation type: " + segmentInterpolation);
         }
 
         boundConsumer.accept(outputValue);
+    }
+    
+    private double catmullRom(double p0, double p1, double p2, double p3, double t) {
+        double t2 = t * t;
+        double t3 = t2 * t;
+        return 0.5 * ((2 * p1) + (-p0 + p2) * t + (2*p0 - 5*p1 + 4*p2 - p3) * t2 + (-p0 + 3*p1 - 3*p2 + p3) * t3);
     }
 
     private static double lerp(double start, double end, double t) {
