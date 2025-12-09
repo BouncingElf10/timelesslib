@@ -12,8 +12,6 @@ import net.minecraft.client.Minecraft;
 
 import java.util.UUID;
 
-import static com.mojang.text2speech.Narrator.LOGGER;
-
 public class TimelessLibClient implements ClientModInitializer {
 	public static final Scheduler<Minecraft> clientScheduler = new Scheduler<>(TimelessFabricHelper::getClient);
 	public static final ClientCountdownManager<Minecraft> clientCountdownManager = new ClientCountdownManager<>(TimelessFabricHelper::getClient);
@@ -22,7 +20,7 @@ public class TimelessLibClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
-		LOGGER.info("TimelessLib Client Initialising");
+		TimelessLib.LOGGER.info("TimelessLib Client Initialising");
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> TimelessClock.update());
         ClientTickEvents.END_CLIENT_TICK.register(client -> clientAnimationManager.update());
