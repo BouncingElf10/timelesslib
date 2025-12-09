@@ -3,6 +3,9 @@ package dev.bouncingelf10.timelesslib.api.cooldown;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+/**
+ * @see AbstractCooldownManager
+ */
 public class ServerCooldownManager<T> extends AbstractCooldownManager<T> {
 
     public ServerCooldownManager(Supplier<T> server) {

@@ -1,6 +1,5 @@
 package dev.bouncingelf10.timelesslib.api.scheduler;
 
-import dev.bouncingelf10.timelesslib.TimelessClock;
 import dev.bouncingelf10.timelesslib.TimelessLib;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
 
@@ -12,6 +11,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class Scheduler<T> {
+
     private final ScheduledThreadPoolExecutor executor;
     private final Map<String, ScheduledTask> tasks = new ConcurrentHashMap<>();
     private final Supplier<T> contextProvider;
@@ -49,66 +49,80 @@ public class Scheduler<T> {
         this.executor.setRemoveOnCancelPolicy(true);
     }
 
-    public TaskHandle afterRealTime(Duration delay, Consumer<T> task) {
-        return scheduleInternal(null, delay, null, () -> task.accept(contextProvider.get()), false, false, TimelessClock.TimeSources.REAL_TIME);
+    /**
+     * Schedules a task to run after the specified delay.
+     * @param delay Delay before running the task
+     * @param task Task to run
+     * @return {@link TaskHandle}
+     */
+    public TaskHandle after(Duration delay, Consumer<T> task) {
+        return scheduleInternal(null, delay, null, () -> task.accept(contextProvider.get()), false, false);
     }
 
-    public TaskHandle afterRealTime(String id, Duration delay, Consumer<T> task) {
-        return scheduleInternal(id, delay, null, () -> task.accept(contextProvider.get()), false, false, TimelessClock.TimeSources.REAL_TIME);
+    /**
+     * Schedules a task to run after the specified delay.
+     * @param id Unique ID for the task
+     * @param delay Delay before running the task
+     * @param task Task to run
+     * @return {@link TaskHandle}
+     * @throws IllegalArgumentException if a task with the specified ID already exists
+     */
+    public TaskHandle after(String id, Duration delay, Consumer<T> task) {
+        return scheduleInternal(id, delay, null, () -> task.accept(contextProvider.get()), false, false);
     }
 
-    public TaskHandle everyRealTime(Duration period, Consumer<T> task) {
-        return scheduleInternal(null, period, period, () -> task.accept(contextProvider.get()), true, false, TimelessClock.TimeSources.REAL_TIME);
+    /**
+     * Schedules a repeating task to run at the specified interval.
+     * @param period Interval between runs
+     * @param task Task to run
+     * @return {@link TaskHandle}
+     */
+    public TaskHandle every(Duration period, Consumer<T> task) {
+        return scheduleInternal(null, period, period, () -> task.accept(contextProvider.get()), true, false);
     }
 
-    public TaskHandle everyRealTimeFixedRate(Duration period, Consumer<T> task) {
-        return scheduleInternal(null, period, period, () -> task.accept(contextProvider.get()), true, true, TimelessClock.TimeSources.REAL_TIME);
+    /**
+     * Schedules a repeating task to run at the specified interval, with a fixed delay between runs.<br>
+     * E.g. {@link #every(Duration, Consumer)} will run the interval after the task has finished executing, whereas this method will run the interval immediately after the task starts executing.
+     * @param period
+     * @param task
+     * @return {@link TaskHandle}
+     */
+    public TaskHandle everyFixedRate(Duration period, Consumer<T> task) {
+        return scheduleInternal(null, period, period, () -> task.accept(contextProvider.get()), true, true);
     }
 
-    public TaskHandle afterGameTime(Duration delay, Consumer<T> task) {
-        return scheduleInternal(null, delay, null, () -> task.accept(contextProvider.get()), false, false, TimelessClock.TimeSources.GAME_TIME);
-    }
-
-    public TaskHandle everyGameTime(Duration period, Consumer<T> task) {
-        return scheduleInternal(null, period, period, () -> task.accept(contextProvider.get()), true, false, TimelessClock.TimeSources.GAME_TIME);
-    }
-
-    public TaskHandle everyGameTimeFixedRate(Duration period, Consumer<T> task) {
-        return scheduleInternal(null, period, period, () -> task.accept(contextProvider.get()), true, true, TimelessClock.TimeSources.GAME_TIME);
-    }
-
-    public CompletableFuture<Void> afterRealTimeAsync(Duration delay, Consumer<T> task) {
-        CompletableFuture<Void> futureResult = new CompletableFuture<>();
-        afterRealTime(delay, context -> {
+    /**
+     * Schedules a task to run after the specified delay, returning a {@link CompletableFuture} that completes when the task has finished executing.
+     * @param delay Delay before running the task
+     * @param task Task to run
+     * @return {@link CompletableFuture}
+     */
+    public CompletableFuture<Void> afterAsync(Duration delay, Consumer<T> task) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        after(delay, ctx -> {
             try {
-                task.accept(context);
-                futureResult.complete(null);
+                task.accept(ctx);
+                future.complete(null);
             } catch (Throwable t) {
-                futureResult.completeExceptionally(t);
+                future.completeExceptionally(t);
             }
         });
-        return futureResult;
+        return future;
     }
 
-    public CompletableFuture<Void> afterGameTimeAsync(Duration delay, Consumer<T> task) {
-        CompletableFuture<Void> futureResult = new CompletableFuture<>();
-        afterGameTime(delay, context -> {
-            try {
-                task.accept(context);
-                futureResult.complete(null);
-            } catch (Throwable t) {
-                futureResult.completeExceptionally(t);
-            }
-        });
-        return futureResult;
-    }
-
+    /**
+     * If you're getting the scheduler through {@link TimelessLib#getServerScheduler()} or the client counterpart you should NOT call this method.
+     */
     public void shutdown() {
         tasks.values().forEach(ScheduledTask::cancelSilently);
         tasks.clear();
         executor.shutdownNow();
     }
 
+    /**
+     * If you're getting the scheduler through {@link TimelessLib#getServerScheduler()} or the client counterpart you should NOT call this method.
+     */
     public void shutdownGracefully(long timeout, TimeUnit unit) throws InterruptedException {
         tasks.values().forEach(ScheduledTask::cancelSilently);
         tasks.clear();
@@ -119,33 +133,21 @@ public class Scheduler<T> {
     public boolean isShutdown() { return executor.isShutdown(); }
     public boolean isTerminated() { return executor.isTerminated(); }
 
-    private TaskHandle scheduleInternal(String idOverride, Duration initialDelay, Duration period, Runnable taskRunnable, boolean repeating, boolean fixedRate, TimelessClock.TimeSource timeSource) {
+    private TaskHandle scheduleInternal(String idOverride, Duration initialDelay, Duration period, Runnable userTask, boolean repeating, boolean fixedRate) {
         Objects.requireNonNull(initialDelay);
-        Objects.requireNonNull(taskRunnable);
+        Objects.requireNonNull(userTask);
 
-        String taskId = idOverride != null ? idOverride : UUID.randomUUID().toString();
-        if (tasks.containsKey(taskId)) {
-            throw new IllegalArgumentException("Task ID already exists: " + taskId);
+        String id = (idOverride != null ? idOverride : UUID.randomUUID().toString());
+        if (tasks.containsKey(id)) {
+            throw new IllegalArgumentException("Task ID already exists: " + id);
         }
 
-        ScheduledTask scheduledTask = new ScheduledTask(taskId, initialDelay, period, taskRunnable, repeating, fixedRate, timeSource);
-        tasks.put(taskId, scheduledTask);
-        scheduledTask.scheduleNext();
-        return scheduledTask;
-    }
+        ScheduledTask scheduledTask = new ScheduledTask(id, initialDelay, period, userTask, repeating, fixedRate);
 
-    public interface TaskHandle {
-        boolean cancel();
-        boolean pause();
-        boolean resume();
-        boolean isCancelled();
-        boolean isPaused();
-        boolean isRunning();
-        boolean isScheduled();
-        Optional<Duration> getRemainingDelay();
-        Optional<Duration> getPeriod();
-        boolean runNow();
-        String id();
+        tasks.put(id, scheduledTask);
+        scheduledTask.scheduleNext();
+
+        return scheduledTask;
     }
 
     private class ScheduledTask implements TaskHandle {
@@ -154,39 +156,44 @@ public class Scheduler<T> {
         private final boolean repeating;
         private final boolean fixedRate;
         private final Duration period;
-        private final TimelessClock.TimeSource timeSource;
 
         private final AtomicBoolean cancelled = new AtomicBoolean(false);
         private final AtomicBoolean paused = new AtomicBoolean(false);
         private final AtomicBoolean running = new AtomicBoolean(false);
 
         private volatile ScheduledFuture<?> future;
+
         private final AtomicLong nextRunNanos = new AtomicLong(-1);
         private volatile long remainingNanosOnPause = -1;
 
-        ScheduledTask(String id, Duration initialDelay, Duration period, Runnable userTask, boolean repeating, boolean fixedRate, TimelessClock.TimeSource timeSource) {
+        private long now() {
+            return System.nanoTime();
+        }
+
+        ScheduledTask(String id, Duration initialDelay, Duration period, Runnable userTask, boolean repeating, boolean fixedRate) {
             this.id = id;
             this.userTask = userTask;
             this.repeating = repeating;
             this.fixedRate = fixedRate;
             this.period = period;
-            this.timeSource = timeSource;
 
-            long now = timeSource.now();
+            long start = now();
             long delayNanos = Math.max(0L, initialDelay.toNanos());
-            this.nextRunNanos.set(now + delayNanos);
+
+            this.nextRunNanos.set(start + delayNanos);
         }
 
         private void scheduleNext() {
             if (cancelled.get()) return;
-            long delay = Math.max(0L, nextRunNanos.get() - timeSource.now());
+
+            long delay = Math.max(0L, nextRunNanos.get() - now());
             future = executor.schedule(this::runTask, delay, TimeUnit.NANOSECONDS);
         }
 
         private void runTask() {
             if (cancelled.get()) return;
             if (paused.get()) {
-                remainingNanosOnPause = Math.max(0L, nextRunNanos.get() - timeSource.now());
+                remainingNanosOnPause = Math.max(0L, nextRunNanos.get() - now());
                 return;
             }
 
@@ -197,7 +204,6 @@ public class Scheduler<T> {
                 userTask.run();
             } catch (Throwable t) {
                 errorHandler.onError(id, t);
-                TimelessLib.LOGGER.error("Failed to execute scheduled task: ", t);
             } finally {
                 running.set(false);
             }
@@ -207,8 +213,14 @@ public class Scheduler<T> {
                 return;
             }
 
-            long nextExecutionTime = fixedRate ? scheduledStart + period.toNanos() : timeSource.now() + period.toNanos();
-            nextRunNanos.set(nextExecutionTime);
+            long next;
+            if (fixedRate) {
+                next = scheduledStart + period.toNanos();
+            } else {
+                next = now() + period.toNanos();
+            }
+
+            nextRunNanos.set(next);
 
             if (!cancelled.get() && !paused.get()) {
                 scheduleNext();
@@ -233,7 +245,7 @@ public class Scheduler<T> {
             if (cancelled.get() || !paused.compareAndSet(false, true)) return false;
 
             if (future != null && !future.isDone()) {
-                remainingNanosOnPause = Math.max(0L, nextRunNanos.get() - timeSource.now());
+                remainingNanosOnPause = Math.max(0L, nextRunNanos.get() - now());
                 future.cancel(false);
             }
             return true;
@@ -243,11 +255,17 @@ public class Scheduler<T> {
         public boolean resume() {
             if (cancelled.get() || !paused.compareAndSet(true, false)) return false;
 
-            long adjustedDelay = remainingNanosOnPause < 0 ? 0 : remainingNanosOnPause;
-            nextRunNanos.set(timeSource.now() + adjustedDelay);
+            long delay = remainingNanosOnPause < 0 ? 0 : remainingNanosOnPause;
+            nextRunNanos.set(now() + delay);
             remainingNanosOnPause = -1;
+
             scheduleNext();
             return true;
+        }
+
+        @Override
+        public boolean pauseOrUnpause() {
+            return !paused.get() ? pause() : resume();
         }
 
         @Override public boolean isCancelled() { return cancelled.get(); }
@@ -264,8 +282,8 @@ public class Scheduler<T> {
             if (cancelled.get()) return Optional.empty();
             if (paused.get()) return Optional.of(Duration.ofNanos(Math.max(0L, remainingNanosOnPause)));
 
-            long remainingDelayNanos = Math.max(0L, nextRunNanos.get() - timeSource.now());
-            return Optional.of(Duration.ofNanos(remainingDelayNanos));
+            long remaining = Math.max(0L, nextRunNanos.get() - now());
+            return Optional.of(Duration.ofNanos(remaining));
         }
 
         @Override
@@ -276,6 +294,7 @@ public class Scheduler<T> {
         @Override
         public boolean runNow() {
             if (cancelled.get() || paused.get()) return false;
+
             executor.execute(() -> {
                 try { userTask.run(); }
                 catch (Throwable t) { errorHandler.onError(id, t); }
@@ -283,7 +302,6 @@ public class Scheduler<T> {
             return true;
         }
 
-        @Override
-        public String id() { return id; }
+        @Override public String id() { return id; }
     }
 }
