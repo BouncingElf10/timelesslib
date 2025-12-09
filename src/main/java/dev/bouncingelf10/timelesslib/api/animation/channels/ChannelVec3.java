@@ -1,7 +1,7 @@
 package dev.bouncingelf10.timelesslib.api.animation.channels;
 
-import dev.bouncingelf10.timelesslib.TimelessClock;
 import dev.bouncingelf10.timelesslib.api.animation.*;
+import dev.bouncingelf10.timelesslib.api.animation.keyframes.KeyframeDouble;
 import dev.bouncingelf10.timelesslib.api.animation.keyframes.KeyframeVec3;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
 import net.minecraft.world.phys.Vec3;
@@ -15,13 +15,6 @@ public class ChannelVec3 {
     private Interpolation defaultInterpolation = Interpolation.EASE;
     private Easing defaultEasing = Easing.LINEAR;
     private Consumer<Vec3> boundConsumer = vec -> {};
-    private boolean tangentsDirty = true;
-    private TimelessClock.TimeSource timeSource = TimelessClock.TimeSources.GAME_TIME;
-    private boolean useTimelineTime = true;
-
-    private double tension = 0.0;
-    private double continuity = 0.0;
-    private double bias = 0.0;
 
     public ChannelVec3(String name) {
         this.name = Objects.requireNonNull(name);
@@ -31,19 +24,46 @@ public class ChannelVec3 {
         return name;
     }
 
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     */
     public ChannelVec3 keyframe(double timeSeconds, Vec3 value) {
         return addKeyframe(KeyframeVec3.of(timeSeconds, value));
     }
-
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     * Also sets the easing for the keyframe. <br>
+     * Note: Keyframes can override all previous defaults and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelVec3} > {@link KeyframeVec3}
+     */
     public ChannelVec3 keyframe(double timeSeconds, Vec3 value, Easing easing) {
         return addKeyframe(KeyframeVec3.of(timeSeconds, value, easing));
     }
-
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     * Also sets the interpolation for the keyframe. <br>
+     * Note: Keyframes can override all previous defaults and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelVec3} > {@link KeyframeVec3}
+     */
     public ChannelVec3 keyframe(double timeSeconds, Vec3 value, Interpolation interpolation) {
         return addKeyframe(KeyframeVec3.of(timeSeconds, value, interpolation));
     }
-
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     * Also sets the interpolation and easing for the keyframe. <br>
+     * Note: Keyframes can override all previous defaults and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelVec3} > {@link KeyframeVec3}
+     */
     public ChannelVec3 keyframe(double timeSeconds, Vec3 value, Interpolation interpolation, Easing easing) {
+        return addKeyframe(KeyframeVec3.of(timeSeconds, value, easing, interpolation));
+    }
+    /**
+     * Adds a keyframe at the specified time in seconds.
+     * Also sets the easing and interpolation for the keyframe. <br>
+     * Note: Keyframes can override all previous defaults and follow a hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelVec3} > {@link KeyframeVec3}
+     */
+    public ChannelVec3 keyframe(double timeSeconds, Vec3 value, Easing easing, Interpolation interpolation) {
         return addKeyframe(KeyframeVec3.of(timeSeconds, value, easing, interpolation));
     }
 
@@ -66,170 +86,122 @@ public class ChannelVec3 {
         double seconds = duration.toNanos() / 1e9;
         return keyframe(seconds, value, interpolation, easing);
     }
-
+    /**
+     * Adds a keyframe using a keyframe object. <br>
+     * I advise you use the provided methods to create keyframes. ({@link #keyframe(double, Vec3)}, etc.)
+     */
     public ChannelVec3 addKeyframe(KeyframeVec3 keyframe) {
         keyframes.add(keyframe);
         keyframes.sort(Comparator.comparingDouble(k -> k.timeSeconds));
-        tangentsDirty = true;
         return this;
     }
-
-    public ChannelVec3 timeSource(TimelessClock.TimeSource source) {
-        this.useTimelineTime = false;
-        this.timeSource = source;
-        return this;
-    }
-
+    /**
+     * Sets the default interpolation for the channel. <br>
+     * Note: Channel defaults override timeline defaults but can still be overwritten by keyframes following this hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelVec3} > {@link KeyframeVec3}
+     */
     public ChannelVec3 defaultInterpolation(Interpolation interpolation) {
         this.defaultInterpolation = Objects.requireNonNull(interpolation);
         return this;
     }
-
+    /**
+     * Sets the default easing for the channel. <br>
+     * Note: Channel defaults override timeline defaults but can still be overwritten by keyframes following this hierarchy: <br>
+     * {@link AnimationTimeline} > {@link ChannelVec3} > {@link KeyframeVec3}
+     */
     public ChannelVec3 defaultEasing(Easing easing) {
         this.defaultEasing = Objects.requireNonNull(easing);
         return this;
     }
-
+    /**
+     * Binds the channel to a consumer. <br>
+     * This is the way to assign a variable to the output of the channel. <br>
+     * E.g. {@code channel.bind(value -> System.out.println(value));} or<br>
+     * {@code channel.bind(myVariable::setValue);}
+     */
     public ChannelVec3 bind(Consumer<Vec3> consumer) {
         this.boundConsumer = Objects.requireNonNull(consumer);
         return this;
     }
 
-    public ChannelVec3 setTCB(double tension, double continuity, double bias) {
-        this.tension = tension;
-        this.continuity = continuity;
-        this.bias = bias;
-        tangentsDirty = true;
-        return this;
-    }
-
     public double computeDurationSeconds() {
         if (keyframes.isEmpty()) return 0.0;
-        return keyframes.get(keyframes.size() - 1).timeSeconds;
+        return keyframes.get(keyframes.size()-1).timeSeconds;
     }
 
-    public void computeTangentsIfNeeded() {
-        if (!tangentsDirty) return;
-        tangentsDirty = false;
-
-        int frameCount = keyframes.size();
-        if (frameCount == 0) return;
-        if (frameCount == 1) {
-            keyframes.get(0).tangent = Vec3.ZERO;
-            return;
-        }
-
-        for (int i = 0; i < frameCount; i++) {
-            KeyframeVec3 previous = (i > 0) ? keyframes.get(i - 1) : keyframes.get(i);
-            KeyframeVec3 current = keyframes.get(i);
-            KeyframeVec3 next = (i < frameCount - 1) ? keyframes.get(i + 1) : keyframes.get(i);
-
-            double deltaTime = next.timeSeconds - previous.timeSeconds;
-            if (deltaTime == 0.0) {
-                current.tangent = Vec3.ZERO;
-                continue;
-            }
-
-            Vec3 deltaValue = new Vec3(
-                    next.value.x - previous.value.x,
-                    next.value.y - previous.value.y,
-                    next.value.z - previous.value.z
-            );
-
-            if (tension == 0.0 && continuity == 0.0 && bias == 0.0) {
-                current.tangent = new Vec3(deltaValue.x / 2.0 / deltaTime, deltaValue.y / 2.0 / deltaTime, deltaValue.z / 2.0 / deltaTime);
-            } else {
-                double dtPrev = current.timeSeconds - previous.timeSeconds;
-                double dtNext = next.timeSeconds - current.timeSeconds;
-
-                Vec3 derivativePrev = dtPrev > 0
-                        ? new Vec3((current.value.x - previous.value.x) / dtPrev,
-                        (current.value.y - previous.value.y) / dtPrev,
-                        (current.value.z - previous.value.z) / dtPrev)
-                        : Vec3.ZERO;
-
-                Vec3 derivativeNext = dtNext > 0
-                        ? new Vec3((next.value.x - current.value.x) / dtNext,
-                        (next.value.y - current.value.y) / dtNext,
-                        (next.value.z - current.value.z) / dtNext)
-                        : Vec3.ZERO;
-
-                double k1 = (1 - tension) * (1 + continuity) * (1 + bias) / 2.0;
-                double k2 = (1 - tension) * (1 - continuity) * (1 - bias) / 2.0;
-
-                current.tangent = new Vec3(
-                        k1 * derivativePrev.x + k2 * derivativeNext.x,
-                        k1 * derivativePrev.y + k2 * derivativeNext.y,
-                        k1 * derivativePrev.z + k2 * derivativeNext.z
-                );
-            }
-        }
-    }
-
-    public void evaluateAt(double timeSeconds, Interpolation timelineDefaultInterpolation, Easing timelineDefaultEasing, boolean computeTangentsForTimeline) {
-        double effectiveTime = useTimelineTime ? timeSeconds : (timeSource.now() / 1e9);
-
+    /**
+     * Evaluates the channel at the specified time in seconds. You mostly shouldn't call this method directly.
+     */
+    public void evaluateAt(double timeSeconds, Interpolation timelineDefaultInterpolation, Easing timelineDefaultEasing) {
         if (keyframes.isEmpty()) {
-            boundConsumer.accept(Vec3.ZERO);
+            boundConsumer.accept(new Vec3(0.0, 0.0, 0.0));
             return;
         }
 
-        if (effectiveTime <= keyframes.get(0).timeSeconds) {
+        if (timeSeconds <= keyframes.get(0).timeSeconds) {
             boundConsumer.accept(keyframes.get(0).value);
             return;
         }
 
-        if (effectiveTime >= keyframes.get(keyframes.size() - 1).timeSeconds) {
-            boundConsumer.accept(keyframes.get(keyframes.size() - 1).value);
+        if (timeSeconds >= keyframes.get(keyframes.size()-1).timeSeconds) {
+            boundConsumer.accept(keyframes.get(keyframes.size()-1).value);
             return;
         }
 
-        KeyframeVec3 leftFrame = keyframes.get(0);
-        KeyframeVec3 rightFrame = keyframes.get(keyframes.size() - 1);
-        for (int i = 0; i < keyframes.size() - 1; i++) {
-            KeyframeVec3 frameA = keyframes.get(i);
-            KeyframeVec3 frameB = keyframes.get(i + 1);
-            if (effectiveTime >= frameA.timeSeconds && effectiveTime <= frameB.timeSeconds) {
-                leftFrame = frameA;
-                rightFrame = frameB;
-                break;
-            }
+        int index = Collections.binarySearch(keyframes, KeyframeVec3.of(timeSeconds, Vec3.ZERO), Comparator.comparingDouble(k -> k.timeSeconds));
+        if (index >= 0) {
+            KeyframeVec3 exact = keyframes.get(index);
+            boundConsumer.accept(exact.value);
+            return;
         }
+        int insertionPoint = -(index + 1);
+
+        KeyframeVec3 leftFrame = keyframes.get(insertionPoint - 1);
+        KeyframeVec3 rightFrame = keyframes.get(insertionPoint);
 
         double span = rightFrame.timeSeconds - leftFrame.timeSeconds;
-        double t = span == 0.0 ? 0.0 : (effectiveTime - leftFrame.timeSeconds) / span;
+        double t = span == 0.0 ? 0.0 : (timeSeconds - leftFrame.timeSeconds) / span;
 
         Interpolation segmentInterpolation = leftFrame.interpolation != null ? leftFrame.interpolation : (defaultInterpolation != null ? defaultInterpolation : timelineDefaultInterpolation);
         Easing easing = leftFrame.easing != null ? leftFrame.easing : (defaultEasing != null ? defaultEasing : timelineDefaultEasing);
 
-        Vec3 output;
+        Vec3 outputValue;
         switch (segmentInterpolation) {
-            case STEP -> output = leftFrame.value;
-            case LINEAR -> output = lerp(leftFrame.value, rightFrame.value, t);
+            case STEP -> outputValue = leftFrame.value;
+            case LINEAR -> outputValue = lerp(leftFrame.value, rightFrame.value, t);
             case EASE -> {
                 double easedT = easing == null ? Easing.LINEAR.apply(t) : easing.apply(t);
-                output = lerp(leftFrame.value, rightFrame.value, easedT);
+                outputValue = lerp(leftFrame.value, rightFrame.value, easedT);
             }
-            case HERMITE -> {
-                if (computeTangentsForTimeline) computeTangentsIfNeeded();
-                Vec3 m0 = leftFrame.tangent.scale(span);
-                Vec3 m1 = rightFrame.tangent.scale(span);
+            case CATMULL -> {
+                int i = insertionPoint - 1;
+                int size = keyframes.size();
 
-                double h00 = 2 * t * t * t - 3 * t * t + 1;
-                double h10 = t * t * t - 2 * t * t + t;
-                double h01 = -2 * t * t * t + 3 * t * t;
-                double h11 = t * t * t - t * t;
+                int i0 = Math.max(0, i - 1);
+                int i2 = i + 1;
+                int i3 = Math.min(size - 1, i + 2);
 
-                output = new Vec3(
-                        h00 * leftFrame.value.x + h10 * m0.x + h01 * rightFrame.value.x + h11 * m1.x,
-                        h00 * leftFrame.value.y + h10 * m0.y + h01 * rightFrame.value.y + h11 * m1.y,
-                        h00 * leftFrame.value.z + h10 * m0.z + h01 * rightFrame.value.z + h11 * m1.z
+                Vec3 p0 = keyframes.get(i0).value;
+                Vec3 p1 = keyframes.get(i).value;
+                Vec3 p2 = keyframes.get(i2).value;
+                Vec3 p3 = keyframes.get(i3).value;
+
+                outputValue = new Vec3(
+                        catmullRom(p0.x, p1.x, p2.x, p3.x, t),
+                        catmullRom(p0.y, p1.y, p2.y, p3.y, t),
+                        catmullRom(p0.z, p1.z, p2.z, p3.z, t)
                 );
             }
             default -> throw new IllegalStateException("Invalid interpolation type: " + segmentInterpolation);
         }
 
-        boundConsumer.accept(output);
+        boundConsumer.accept(outputValue);
+    }
+
+    private double catmullRom(double p0, double p1, double p2, double p3, double t) {
+        double t2 = t * t;
+        double t3 = t2 * t;
+        return 0.5 * ((2 * p1) + (-p0 + p2) * t + (2*p0 - 5*p1 + 4*p2 - p3) * t2 + (-p0 + 3*p1 - 3*p2 + p3) * t3);
     }
 
     private static Vec3 lerp(Vec3 start, Vec3 end, double t) {

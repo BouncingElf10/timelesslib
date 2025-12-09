@@ -1,13 +1,16 @@
 package dev.bouncingelf10.timelesslib.api.countdown;
 
-import dev.bouncingelf10.timelesslib.TimelessClock;
+import dev.bouncingelf10.timelesslib.api.clock.TimeSource;
+import dev.bouncingelf10.timelesslib.api.clock.TimeSources;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
-import dev.bouncingelf10.timelesslib.api.time.TimeFormatter;
+import dev.bouncingelf10.timelesslib.api.time.TimeFormat;
 import dev.bouncingelf10.timelesslib.fabric.TimelessFabricHelper;
 
 import java.util.function.Supplier;
 
-
+/**
+ * @see CountdownManager
+ */
 public class ClientCountdownManager<T> extends CountdownManager<T> {
     public ClientCountdownManager(Supplier<T> contextProvider) {
         super(contextProvider);
@@ -18,20 +21,21 @@ public class ClientCountdownManager<T> extends CountdownManager<T> {
     }
 
     public ClientCountdown startClient(Duration total) {
-        Countdown base = super.start(total, Duration.ofMillis(10), TimelessClock.TimeSources.GAME_TIME);
+        Countdown base = super.start(total, Duration.ofMillis(10), TimeSources.GAME_TIME);
         return new ClientCountdown(base);
     }
 
     public ClientCountdown startClientRealtime(Duration total) {
-        Countdown base = super.start(total, Duration.ofMillis(10), TimelessClock.TimeSources.REAL_TIME);
+        Countdown base = super.start(total, Duration.ofMillis(10), TimeSources.REAL_TIME);
         return new ClientCountdown(base);
     }
 
-    public ClientCountdown startClient(Duration total, Duration tickEvery, TimelessClock.TimeSource timeSource) {
+    public ClientCountdown startClient(Duration total, Duration tickEvery, TimeSource timeSource) {
         Countdown base = super.start(total, tickEvery, timeSource);
         return new ClientCountdown(base);
     }
 
+    @SuppressWarnings("unchecked")
     public class ClientCountdown {
         private final Countdown base;
 
@@ -40,28 +44,29 @@ public class ClientCountdownManager<T> extends CountdownManager<T> {
         }
 
         public ClientCountdown onTick(java.util.function.BiConsumer<T, Duration> handler) {
-            base.onTick(handler);
+            base.onTick((java.util.function.BiConsumer<Object, Duration>) handler);
             return this;
         }
 
         public ClientCountdown onFinish(java.util.function.Consumer<T> handler) {
-            base.onFinish(handler);
+            base.onFinish((java.util.function.Consumer<Object>) handler);
             return this;
         }
 
         public ClientCountdown onThreshold(Duration threshold, java.util.function.Consumer<T> handler) {
-            base.onThreshold(threshold, handler);
+            base.onThreshold(threshold, (java.util.function.Consumer<Object>) handler);
             return this;
         }
-        
+
         public ClientCountdown every(Duration interval, java.util.function.Consumer<T> handler) {
-            base.every(interval, handler);
+            base.every(interval, (java.util.function.Consumer<Object>) handler);
             return this;
         }
 
         public boolean pause() { return base.pause(); }
         public boolean resume() { return base.resume(); }
         public boolean cancel() { return base.cancel(); }
+        public boolean pauseOrUnpause() { return base.pauseOrUnpause(); }
         public boolean isPaused() { return base.isPaused(); }
         public boolean isCancelled() { return base.isCancelled(); }
         public boolean isFinished() { return base.isFinished(); }
@@ -72,7 +77,7 @@ public class ClientCountdownManager<T> extends CountdownManager<T> {
             return every(Duration.TICK, client -> TimelessFabricHelper.clientDisplayToUser(remaining().toNanos()));
         }
 
-        public ClientCountdown displayToUser(TimeFormatter.TimeFormat format, String prefix, String suffix) {
+        public ClientCountdown displayToUser(TimeFormat format, String prefix, String suffix) {
             return every(Duration.TICK, client -> TimelessFabricHelper.clientDisplayToUser(remaining().toNanos(), format, prefix, suffix));
         }
     }
