@@ -67,7 +67,7 @@ public class Countdown {
         scheduledTask = typedManager().executor.schedule(() -> {
             Object context = typedManager().contextProvider.get();
             if (context == null) {
-                TimelessLib.LOGGER.warn("Context provider returned null during countdown tick, cancelling countdown {}", id);
+                TimelessLib.LOGGER.warning("Context provider returned null during countdown tick, cancelling countdown " + id);
                 cancel();
                 return;
             }
@@ -75,9 +75,9 @@ public class Countdown {
             try {
                 typedManager().mainThreadDispatcher.accept(context, this::runTickOnMainThread);
             } catch (Throwable t) {
-                TimelessLib.LOGGER.error("Error dispatching countdown tick for {}", id, t);
+                TimelessLib.LOGGER.severe("Error dispatching countdown tick for " + id + " \n" + t);
                 try { runTickOnMainThread(); } catch (Throwable inner) {
-                    TimelessLib.LOGGER.error("Error running tick directly for {}", id, inner);
+                    TimelessLib.LOGGER.severe("Error running tick directly for " + id + " \n" + inner);
                 }
             }
         }, delayNanos, TimeUnit.NANOSECONDS);
@@ -95,14 +95,14 @@ public class Countdown {
 
         Object context = typedManager().contextProvider.get();
         if (context == null) {
-            TimelessLib.LOGGER.warn("Context provider returned null during countdown tick, cancelling countdown {}", id);
+            TimelessLib.LOGGER.warning("Context provider returned null during countdown tick, cancelling countdown" + id);
             cancel();
             return;
         }
 
         tickHandlers.forEach(handler -> {
             try { handler.accept(context, remainingDuration); }
-            catch (Throwable t) { TimelessLib.LOGGER.error("Error in tick handler for {}", id, t); }
+            catch (Throwable t) { TimelessLib.LOGGER.severe("Error in tick handler for " + id + " \n" + t); }
         });
 
         intervalHandlers.forEach((interval, handlers) -> {
@@ -110,7 +110,7 @@ public class Countdown {
             while (elapsedNanos >= nextFire) {
                 for (Consumer<Object> handler : handlers) {
                     try { handler.accept(context); }
-                    catch (Throwable t) { TimelessLib.LOGGER.error("Error in interval handler for {} at interval {}", id, interval, t); }
+                    catch (Throwable t) { TimelessLib.LOGGER.severe("Error in interval handler for " + id +" at interval " + interval + " \n" + t); }
                 }
                 nextFire += interval;
                 nextElapsedToFire.put(interval, nextFire);
@@ -125,7 +125,7 @@ public class Countdown {
                     if (handlers != null) {
                         handlers.forEach(handler -> {
                             try { handler.accept(context); }
-                            catch (Throwable t) { TimelessLib.LOGGER.error("Error in threshold handler for {} at {}", id, key, t); }
+                            catch (Throwable t) { TimelessLib.LOGGER.severe("Error in threshold handler for " + id + " at " + key + " \n" + t); }
                         });
                     }
                 });
@@ -136,7 +136,7 @@ public class Countdown {
             try {
                 finishHandlers.forEach(handler -> {
                     try { handler.accept(context); }
-                    catch (Throwable t) { TimelessLib.LOGGER.error("Error in finish handler for {}", id, t); }
+                    catch (Throwable t) { TimelessLib.LOGGER.severe("Error in finish handler for " + id + " \n" + t); }
                 });
             } finally {
                 typedManager().activeCountdowns.remove(id);

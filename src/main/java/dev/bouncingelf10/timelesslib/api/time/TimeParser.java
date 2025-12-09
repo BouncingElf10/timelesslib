@@ -21,7 +21,7 @@ public class TimeParser {
 
     /**
      * Parses a duration string into a {@link Duration}.<br>
-     * Eg. "5h 30m 10s" -> 1530000000000 nanoseconds.
+     * Eg. "5h 30m 10s": durUnit = 1530000000000 nanoseconds.
      * @param durationStr Duration string to parse
      * @return Parsed duration
      * @throws IllegalArgumentException when the duration string is invalid
@@ -56,18 +56,53 @@ public class TimeParser {
     }
 
     private static Optional<DurationUnit> parseUnit(String unit) {
-        return Optional.ofNullable(
-                switch (unit) {
-                    case "ns" -> DurationUnit.NANOSECONDS;
-                    case "μs", "us" -> DurationUnit.MICROSECONDS;
-                    case "ms" -> DurationUnit.MILLISECONDS;
-                    case "s", "sec", "secs", "second", "seconds" -> DurationUnit.SECONDS;
-                    case "m", "min", "mins", "minute", "minutes" -> DurationUnit.MINUTES;
-                    case "h", "hr", "hrs", "hour", "hours" -> DurationUnit.HOURS;
-                    case "d", "day", "days" -> DurationUnit.DAYS;
-                    case "t", "tick", "ticks" -> DurationUnit.TICKS;
-                    default -> null;
-                }
-        );
+        DurationUnit durUnit;
+        switch (unit) {
+            case "ns":
+                durUnit = DurationUnit.NANOSECONDS;
+                break;
+            case "μs":
+            case "us":
+                durUnit = DurationUnit.MICROSECONDS;
+                break;
+            case "ms":
+                durUnit = DurationUnit.MILLISECONDS;
+                break;
+            case "s":
+            case "sec":
+            case "secs":
+            case "second":
+            case "seconds":
+                durUnit = DurationUnit.SECONDS;
+                break;
+            case "m":
+            case "min":
+            case "mins":
+            case "minute":
+            case "minutes":
+                durUnit = DurationUnit.MINUTES;
+                break;
+            case "h":
+            case "hr":
+            case "hrs":
+            case "hour":
+            case "hours":
+                durUnit = DurationUnit.HOURS;
+                break;
+            case "d":
+            case "day":
+            case "days":
+                durUnit = DurationUnit.DAYS;
+                break;
+            case "t":
+            case "tick":
+            case "ticks":
+                durUnit = DurationUnit.TICKS;
+                break;
+            default:
+                durUnit = null;
+                break;
+        }
+        return Optional.ofNullable(durUnit);
     }
 }
