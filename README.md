@@ -1,7 +1,7 @@
 <div align="center">
 
 # TimelessLib
-A lightweight time & animation utility library for Fabric (and maybe forge to come)
+A lightweight time & animation utility library for Fabric (and maybe forge to come) <br>
 Download on [Modrinth](https://modrinth.com/mod/timelesslib) and CurseForge
 
 </div>
