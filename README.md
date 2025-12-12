@@ -65,4 +65,4 @@ You can check the version of timelesslib on the versions tab or in the dropdown 
 
 ## Documentation
 
-While there is no official wiki (yet) the libary does include Javadoc and an example mod found [here](https://github.com/BouncingElf10/timelesslib-example-mod-1.21.1).
+Documentation can be found [here](https://github.com/BouncingElf10/timelesslib/wiki) and the libary does include Javadoc and an example mod found [here](https://github.com/BouncingElf10/timelesslib-example-mod-1.21.1).
