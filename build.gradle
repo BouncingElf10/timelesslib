@@ -98,7 +98,7 @@ modrinth {
     projectId = "vKDSSPpv"
 
     versionNumber = project.version
-    versionName = "${project.name} ${project.version}"
+    versionName = "TimelessLib ${project.version}"
 
     uploadFile = tasks.remapJar
 
