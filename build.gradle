@@ -1,6 +1,9 @@
 plugins {
 	id 'fabric-loom' version "${loom_version}"
 	id 'maven-publish'
+    id 'java'
+    id 'com.modrinth.minotaur' version '2.+'
+    id 'net.darkhax.curseforgegradle' version '1.1.28'
 }
 
 version = project.mod_version
@@ -76,4 +79,46 @@ publishing {
 		// The repositories here will be used for publishing your artifact, not for
 		// retrieving dependencies.
 	}
+}
+
+def supportedMcVersions = [
+        "1.20.5",
+        "1.20.6",
+        "1.21",
+        "1.21.1",
+        "1.21.2",
+        "1.21.3",
+        "1.21.4",
+        "1.21.5",
+        "1.21.6",
+        "1.21.7",
+        "1.21.8",
+        "1.21.9",
+        "1.21.10"
+]
+
+def modrinthToken = System.getenv("MODRINTH_TOKEN")
+
+modrinth {
+    token = modrinthToken
+    projectId = "vKDSSPpv"
+
+    versionNumber = project.version as Property<String>
+    versionName = "${project.name} ${project.version}"
+
+    uploadFile = tasks.remapJar
+
+    additionalFiles = [
+            tasks.remapSourcesJar,
+            tasks.javadocJar
+    ]
+
+    gameVersions = supportedMcVersions
+    loaders = ["fabric"]
+
+    changelog = file("CHANGELOG.md").text
+}
+
+tasks.register("publishAll") {
+    dependsOn "modrinth"
 }
