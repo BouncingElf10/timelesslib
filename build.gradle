@@ -82,13 +82,20 @@ publishing {
 }
 
 def supportedMcVersions = [
-        "1.19.3",
-        "1.19.4",
-        "1.20",
-        "1.20.1",
-        "1.20.2",
-        "1.20.3",
-        "1.20.4"
+        "1.14",
+        "1.14.1",
+        "1.14.2",
+        "1.14.3",
+        "1.14.4",
+        "1.15",
+        "1.15.1",
+        "1.15.2",
+        "1.16",
+        "1.16.1",
+        "1.16.2",
+        "1.16.3",
+        "1.16.4",
+        "1.16.5",
 ]
 
 def modrinthToken = System.getenv("MODRINTH_TOKEN")
@@ -98,7 +105,7 @@ modrinth {
     projectId = "vKDSSPpv"
 
     versionNumber = project.version
-    versionName = "${project.name} ${project.version}"
+    versionName = "TimelessLib ${project.version}"
 
     uploadFile = tasks.remapJar
 
