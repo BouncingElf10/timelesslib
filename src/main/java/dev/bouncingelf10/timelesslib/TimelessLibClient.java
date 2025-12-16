@@ -21,9 +21,6 @@ public class TimelessLibClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		TimelessLib.LOGGER.info("TimelessLib Client Initialising");
-
-		ClientTickEvents.END_CLIENT_TICK.register(client -> TimelessClock.update());
-        ClientTickEvents.END_CLIENT_TICK.register(client -> clientAnimationManager.update());
     }
 
 	public static Scheduler<Minecraft> getClientScheduler() {
