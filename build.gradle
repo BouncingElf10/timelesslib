@@ -97,7 +97,7 @@ modrinth {
     token = modrinthToken
     projectId = "vKDSSPpv"
 
-    versionNumber = project.version as Property<String>
+    versionNumber = project.version
     versionName = "${project.name} ${project.version}"
 
     uploadFile = tasks.remapJar
