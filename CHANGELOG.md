@@ -1,1 +1,1 @@
-Made the animation manager work smoother
+Fixed a bug concerning the AnimationTimeline
