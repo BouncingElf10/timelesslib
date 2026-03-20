@@ -59,7 +59,7 @@ public enum TimeFormat {
      */
     MINIMAL {
         @Override public String apply(long nanos) {
-            TimeComponents components = new TimeComponents(nanos);
+            TimeFormatter.TimeComponents components = new TimeFormatter.TimeComponents(nanos);
             if (components.days > 0) return components.days + "d";
             if (components.hours > 0) return components.hours + "h";
             if (components.minutes > 0) return components.minutes + "m";
@@ -72,7 +72,7 @@ public enum TimeFormat {
      */
     MINIMAL_TWO {
         @Override public String apply(long nanos) {
-            TimeComponents components = new TimeComponents(nanos);
+            TimeFormatter.TimeComponents components = new TimeFormatter.TimeComponents(nanos);
             List<String> firstTwoParts = new ArrayList<>();
 
             if (components.days > 0) firstTwoParts.add(components.days + "d");
@@ -99,7 +99,7 @@ public enum TimeFormat {
      */
     DEBUG {
         @Override public String apply(long nanos) {
-            TimeComponents components = new TimeComponents(nanos);
+            TimeFormatter.TimeComponents components = new TimeFormatter.TimeComponents(nanos);
             long microseconds = (nanos % 1_000_000_000L) / 1_000L;
             long remainingNanos = nanos % 1_000L;
 

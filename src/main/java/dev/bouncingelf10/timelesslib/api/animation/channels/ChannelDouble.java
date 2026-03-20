@@ -126,7 +126,7 @@ public class ChannelDouble {
 
     public double computeDurationSeconds() {
         if (keyframes.isEmpty()) return 0.0;
-        return keyframes.get(keyframes.size()-1).timeSeconds;
+        return keyframes.get(keyframes.size() - 1).timeSeconds;
     }
 
     /**
@@ -143,8 +143,8 @@ public class ChannelDouble {
             return;
         }
 
-        if (timeSeconds >= keyframes.get(keyframes.size()-1).timeSeconds) {
-            boundConsumer.accept(keyframes.get(keyframes.size()-1).value);
+        if (timeSeconds >= keyframes.get(keyframes.size() - 1).timeSeconds) {
+            boundConsumer.accept(keyframes.get(keyframes.size() - 1).value);
             return;
         }
 
