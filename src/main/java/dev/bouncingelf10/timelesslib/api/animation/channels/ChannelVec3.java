@@ -126,7 +126,7 @@ public class ChannelVec3 {
 
     public double computeDurationSeconds() {
         if (keyframes.isEmpty()) return 0.0;
-        return keyframes.get(keyframes.size()-1).timeSeconds;
+        return keyframes.get(keyframes.size() - 1).timeSeconds;
     }
 
     /**
@@ -143,8 +143,8 @@ public class ChannelVec3 {
             return;
         }
 
-        if (timeSeconds >= keyframes.get(keyframes.size()-1).timeSeconds) {
-            boundConsumer.accept(keyframes.get(keyframes.size()-1).value);
+        if (timeSeconds >= keyframes.get(keyframes.size() - 1).timeSeconds) {
+            boundConsumer.accept(keyframes.get(keyframes.size() - 1).value);
             return;
         }
 

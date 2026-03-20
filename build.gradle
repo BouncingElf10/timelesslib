@@ -4,6 +4,7 @@ plugins {
     id 'java'
     id 'com.modrinth.minotaur' version '2.+'
     id 'net.darkhax.curseforgegradle' version '1.1.28'
+	id 'com.bouncingelf10.minecraft-version-compatibility-checker' version '1.1.0'
 }
 
 version = project.mod_version
