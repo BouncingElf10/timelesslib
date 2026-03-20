@@ -87,6 +87,7 @@ public class AnimationTimeline {
         if (!isPlaying) {
             isPlaying = true;
             isFinished = false;
+            lastTimelineNanoTime = timeSource.now();
             onStartCallbacks.forEach(Runnable::run);
         }
     }
@@ -224,11 +225,12 @@ public class AnimationTimeline {
     }
 
     double getDeltaSeconds() {
+        if (!isPlaying) return 0.0;
+        if (timeSource == TimeSources.GAME_TIME && TimelessClock.isPaused()) return 0.0;
+
         long now = timeSource.now();
         double delta = (now - lastTimelineNanoTime) / 1e9;
         lastTimelineNanoTime = now;
-        if (!isPlaying) return 0.0;
-        if (timeSource == TimeSources.GAME_TIME && TimelessClock.isPaused()) return 0.0;
         return delta * playbackSpeed;
     }
 

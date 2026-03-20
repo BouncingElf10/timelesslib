@@ -32,13 +32,6 @@ public class TimelessFabricHelper {
         return isClient() ? Minecraft.getInstance() : null;
     }
 
-    public static @Nullable UUID getPlayerUuid() {
-        Minecraft client = Minecraft.getInstance();
-        if (client.player == null) return null;
-
-        return client.player.getUUID();
-    }
-
     public static void clientDisplayToUser(long nanosLeft) {
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
@@ -60,7 +53,7 @@ public class TimelessFabricHelper {
         if (!isClient()) return true;
 
         Minecraft client = Minecraft.getInstance();
-        return !client.isPaused() && client.isLocalServer();
+        return !(client.isPaused() && client.isLocalServer());
     }
 
     // ===================== SERVER ==================
