@@ -1,0 +1,29 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "CC0-1.0"
+
+[[mods]]
+modId = "timelesslib"
+version = "${mod_version}"
+displayName = "TimelessLib"
+description = "A lib for all things time!"
+logoFile = "assets/timelesslib/icon.png"
+authors = "BouncingElf10"
+
+[mods.contact]
+homepage = "https://github.com/BouncingElf10/timelesslib"
+sources = "https://github.com/BouncingElf10/timelesslib"
+
+[[dependencies.timelesslib]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1,)"   # adjust to the NeoForge version you target
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.timelesslib]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,1.22)"
+ordering = "NONE"
+side = "BOTH"
