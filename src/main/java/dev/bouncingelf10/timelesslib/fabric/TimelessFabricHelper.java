@@ -37,7 +37,7 @@ public class TimelessFabricHelper {
         if (client.player == null) return;
 
         String msg = TimeFormatter.format(nanosLeft, TimeFormat.VERBOSE_SIMPLE) + " left";
-        client.player.displayClientMessage(Component.literal(msg), true);
+        client.player.sendOverlayMessage(Component.literal(msg));
     }
 
     public static void clientDisplayToUser(long nanosLeft, TimeFormat fmt,
@@ -46,7 +46,7 @@ public class TimelessFabricHelper {
         if (client.player == null) return;
 
         String msg = prefix + TimeFormatter.format(nanosLeft, fmt) + suffix;
-        client.player.displayClientMessage(Component.literal(msg), true);
+        client.player.sendOverlayMessage(Component.literal(msg));
     }
 
     public static boolean shouldAdvanceTime() {
@@ -62,14 +62,14 @@ public class TimelessFabricHelper {
         if (!TimelessLib.isServerInitialized()) return;
 
         String msg = TimeFormatter.format(nanosLeft, TimeFormat.VERBOSE_SIMPLE) + " left";
-        player.displayClientMessage(Component.literal(msg), true);
+        player.sendOverlayMessage(Component.literal(msg));
     }
 
     public static void serverDisplayToUser(long nanosLeft, ServerPlayer player, TimeFormat fmt, String prefix, String suffix) {
         if (!TimelessLib.isServerInitialized()) return;
 
         String msg = prefix + TimeFormatter.format(nanosLeft, fmt) + suffix;
-        player.displayClientMessage(Component.literal(msg), true);
+        player.sendOverlayMessage(Component.literal(msg));
     }
 
     public static void serverDisplayNearbyUsers(long nanosLeft, Vec3 pos, float radius) {
