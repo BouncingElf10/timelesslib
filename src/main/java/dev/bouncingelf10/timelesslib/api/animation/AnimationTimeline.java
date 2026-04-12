@@ -267,4 +267,21 @@ public class AnimationTimeline {
         markDurationDirty();
         return this;
     }
+
+    /**
+     * Creates a copy of this timeline.
+     */
+    public AnimationTimeline copy() {
+        AnimationTimeline copy = new AnimationTimeline(this.timelineId);
+        copy.loop = this.loop;
+        copy.pingPong = this.pingPong;
+        copy.playbackSpeed = this.playbackSpeed;
+        copy.defaultInterpolation = this.defaultInterpolation;
+        copy.defaultEasing = this.defaultEasing;
+        copy.timeSource = this.timeSource;
+        for (var entry : this.doubleChannels.entrySet()) copy.doubleChannels.put(entry.getKey(), entry.getValue().copy());
+        for (var entry : this.vec3Channels.entrySet()) copy.vec3Channels.put(entry.getKey(), entry.getValue().copy());
+        copy.markDurationDirty();
+        return copy;
+    }
 }
