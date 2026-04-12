@@ -81,8 +81,8 @@ publishing {
 }
 
 publishMods {
-	file = tasks.jar.archiveFile
-	additionalFiles.from(tasks.sourcesJar.archiveFile)
+	file = tasks.remapJar.archiveFile
+	additionalFiles.from(tasks.remapSourcesJar.archiveFile)
 	additionalFiles.from(tasks.javadocJar.archiveFile)
 
 	changelog = "added copy() method to timelines and channels"
