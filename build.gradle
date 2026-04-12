@@ -2,8 +2,7 @@ plugins {
 	id 'fabric-loom' version "${loom_version}"
 	id 'maven-publish'
     id 'java'
-    id 'com.modrinth.minotaur' version '2.+'
-    id 'net.darkhax.curseforgegradle' version '1.1.28'
+	id("me.modmuss50.mod-publish-plugin") version "0.8.1"
 }
 
 version = project.mod_version
@@ -81,44 +80,30 @@ publishing {
 	}
 }
 
-def supportedMcVersions = [
-        "1.20.5",
-        "1.20.6",
-        "1.21",
-        "1.21.1",
-        "1.21.2",
-        "1.21.3",
-        "1.21.4",
-        "1.21.5",
-        "1.21.6",
-        "1.21.7",
-        "1.21.8",
-        "1.21.9",
-        "1.21.10"
-]
+publishMods {
+	file = tasks.jar.archiveFile
+	additionalFiles.from(tasks.sourcesJar.archiveFile)
+	additionalFiles.from(tasks.javadocJar.archiveFile)
 
-def modrinthToken = System.getenv("MODRINTH_TOKEN")
+	changelog = "added copy() method to timelines and channels"
+	type = STABLE
+	modLoaders.add("fabric")
 
-modrinth {
-    token = modrinthToken
-    projectId = "vKDSSPpv"
+	modrinth {
+		projectId = "vKDSSPpv"
+		accessToken = providers.environmentVariable("MODRINTH_TOKEN")
+		minecraftVersionRange {
+			start = "1.20.5"
+			end = "1.21.11"
+		}
+	}
 
-    versionNumber = project.version
-    versionName = "TimelessLib ${project.version}"
-
-    uploadFile = tasks.remapJar
-
-    additionalFiles = [
-            tasks.remapSourcesJar,
-            tasks.javadocJar
-    ]
-
-    gameVersions = supportedMcVersions
-    loaders = ["fabric"]
-
-    changelog = file("CHANGELOG.md").text
-}
-
-tasks.register("publishAll") {
-    dependsOn "modrinth"
+	curseforge {
+		projectId = "1490074"
+		accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
+		minecraftVersionRange {
+			start = "1.20.5"
+			end = "1.21.11"
+		}
+	}
 }

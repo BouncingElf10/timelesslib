@@ -193,6 +193,14 @@ public class ChannelDouble {
 
         boundConsumer.accept(outputValue);
     }
+
+    public ChannelDouble copy() {
+        ChannelDouble copy = new ChannelDouble(this.name);
+        copy.keyframes.addAll(this.keyframes);
+        copy.defaultInterpolation = this.defaultInterpolation;
+        copy.defaultEasing = this.defaultEasing;
+        return copy;
+    }
     
     private double catmullRom(double p0, double p1, double p2, double p3, double t) {
         double t2 = t * t;
