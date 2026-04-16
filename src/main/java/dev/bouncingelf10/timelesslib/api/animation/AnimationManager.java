@@ -9,7 +9,12 @@ public class AnimationManager {
     public AnimationTimeline createTimeline(String id) {
         Objects.requireNonNull(id);
         AnimationTimeline timeline = new AnimationTimeline(id);
-        timelines.put(id, timeline);
+        return addTimeline(timeline);
+    }
+    
+    public AnimationTimeline addTimeline(AnimationTimeline timeline) {
+        Objects.requireNonNull(timeline);
+        timelines.put(timeline.id(), timeline);
         return timeline;
     }
 
