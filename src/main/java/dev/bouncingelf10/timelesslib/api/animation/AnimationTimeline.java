@@ -13,7 +13,7 @@ import java.util.*;
 import java.util.function.Consumer;
 
 public class AnimationTimeline {
-    private final String timelineId;
+    private String timelineId;
 
     private final Map<String, ChannelDouble> doubleChannels = new LinkedHashMap<>();
     private final Map<String, ChannelVec3> vec3Channels = new LinkedHashMap<>();
@@ -283,5 +283,13 @@ public class AnimationTimeline {
         for (var entry : this.vec3Channels.entrySet()) copy.vec3Channels.put(entry.getKey(), entry.getValue().copy());
         copy.markDurationDirty();
         return copy;
+    }
+
+    /**
+     * Randomizes the ID of this timeline. Useful for procedural timelines.
+     */
+    public AnimationTimeline randomiseId() {
+        this.timelineId = this.timelineId + "-" + UUID.randomUUID();
+        return this;
     }
 }
