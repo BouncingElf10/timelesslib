@@ -53,7 +53,7 @@ public class TimelessFabricHelper {
         if (!isClient()) return true;
 
         Minecraft client = Minecraft.getInstance();
-        return !(client.isPaused() && client.isSingleplayer());
+        return !(client.isPaused() && client.isLocalServer());
     }
 
     // ===================== SERVER ==================
