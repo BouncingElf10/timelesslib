@@ -20,7 +20,7 @@ public class Scheduler<T> {
     public static class Config {
         public int poolSize = Math.max(1, Runtime.getRuntime().availableProcessors());
         public ThreadFactory threadFactory = Executors.defaultThreadFactory();
-        public boolean daemonThreads = false;
+        public boolean daemonThreads = true;
         public ErrorHandler errorHandler = (taskId, t) -> {};
     }
 
