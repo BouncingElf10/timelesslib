@@ -1,45 +1,52 @@
 package dev.bouncingelf10.timelesslib.api.countdown;
 
-import dev.bouncingelf10.timelesslib.api.clock.TimeSource;
-import dev.bouncingelf10.timelesslib.api.clock.TimeSources;
+import dev.bouncingelf10.timelesslib.InternalAccess;
 import dev.bouncingelf10.timelesslib.TimelessLib;
-import dev.bouncingelf10.timelesslib.api.time.Duration;
+import dev.bouncingelf10.timelesslib.api.scheduler.TaskHandle;
+import net.minecraft.resources.Identifier;
 
 import java.lang.reflect.Method;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
-public class CountdownManager<T> {
+/**
+ * Self-contained countdown engine backing {@link dev.bouncingelf10.timelesslib.api.countdown.ServerCountdownManager}
+ * and {@link dev.bouncingelf10.timelesslib.api.countdown.ClientCountdownManager}. <br>
+ * Deliberately independent from {@code Scheduler} - a countdown's tick/pause/cancel machinery is not shared with
+ * plain scheduled tasks. Not exposed directly - use one of the two classes above instead.
+ */
+abstract class CountdownManager<T> {
+    static final String AUTO_ID_NAMESPACE = "timelesslib";
+
     final ScheduledThreadPoolExecutor executor;
-    final Map<String, Countdown> activeCountdowns = new ConcurrentHashMap<>();
+    final Map<Identifier, TaskHandle> countdowns = new ConcurrentHashMap<>();
     final Supplier<T> contextProvider;
     final BiConsumer<T, Runnable> mainThreadDispatcher;
 
-    public CountdownManager(Supplier<T> contextProvider, BiConsumer<T, Runnable> mainThreadDispatcher) {
-        this(contextProvider, mainThreadDispatcher, Math.max(1, Runtime.getRuntime().availableProcessors()));
+    CountdownManager(InternalAccess access, Supplier<T> contextProvider) {
+        this(access, contextProvider, Math.max(1, Runtime.getRuntime().availableProcessors()));
     }
 
-    public CountdownManager(Supplier<T> contextProvider, BiConsumer<T, Runnable> mainThreadDispatcher, int poolSize) {
+    CountdownManager(InternalAccess access, Supplier<T> contextProvider, int poolSize) {
+        Objects.requireNonNull(access, "Managers can only be constructed by TimelessLib");
         this.contextProvider = Objects.requireNonNull(contextProvider, "contextProvider");
-        this.mainThreadDispatcher = Objects.requireNonNull(mainThreadDispatcher, "mainThreadDispatcher");
+        this.mainThreadDispatcher = detectDispatcher(contextProvider);
         this.executor = new ScheduledThreadPoolExecutor(poolSize);
         this.executor.setRemoveOnCancelPolicy(true);
-    }
-
-    public CountdownManager(Supplier<T> contextProvider) {
-        this(contextProvider, detectDispatcher(contextProvider));
-    }
-
-    public CountdownManager(Supplier<T> contextProvider, int poolSize) {
-        this(contextProvider, detectDispatcher(contextProvider), poolSize);
     }
 
     static <T> BiConsumer<T, Runnable> detectDispatcher(Supplier<T> contextSupplier) {
         T context = contextSupplier.get();
         if (context == null)
-            throw new IllegalArgumentException("Context provider returned null when probing for execute(Runnable). Provide an explicit dispatcher instead.");
+            throw new IllegalArgumentException("Context provider returned null when probing for execute(Runnable).");
 
         try {
             Method executeMethod = context.getClass().getMethod("execute", Runnable.class);
@@ -53,72 +60,64 @@ public class CountdownManager<T> {
                 }
             };
         } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException("Context type " + context.getClass().getName() + " does not expose execute(Runnable). Provide explicit dispatcher.", e);
+            throw new IllegalArgumentException("Context type " + context.getClass().getName() + " does not expose execute(Runnable).", e);
         }
     }
+
+    static Identifier randomId() {
+        return Identifier.fromNamespaceAndPath(AUTO_ID_NAMESPACE, UUID.randomUUID().toString());
+    }
+
     /**
-     * Starts a countdown with a tick interval of 50ms and the game time source.
-     * @param totalDuration Duration of the countdown.
-     * @return {@link Countdown}
-     * @see TimeSources
+     * Looks up an active countdown by its ID.
+     * @param id Countdown ID
+     * @return {@link TaskHandle} or empty if no active countdown has that ID
      */
-    public Countdown start(Duration totalDuration) {
-        Objects.requireNonNull(totalDuration);
-        return start(totalDuration, Duration.ofMillis(50), TimeSources.GAME_TIME);
+    public Optional<TaskHandle> get(Identifier id) {
+        return Optional.ofNullable(countdowns.get(id));
     }
 
     /**
-     * Starts a countdown with a tick interval of 50ms and the real time source.
-     * @param totalDuration Duration of the countdown.
-     * @return {@link Countdown}
-     * @see TimeSources
+     * @return the number of currently active countdowns.
      */
-    public Countdown startRealtime(Duration totalDuration) {
-        Objects.requireNonNull(totalDuration);
-        return start(totalDuration, Duration.ofMillis(50), TimeSources.REAL_TIME);
+    public int activeCountdownCount() {
+        return countdowns.size();
     }
 
     /**
-     * Starts a countdown with the specified tick interval and time source.
-     * @param totalDuration Duration of the countdown.
-     * @param tickInterval Tick interval of the countdown.
-     * @param timeSource Time source to use.
-     * @return {@link Countdown}
-     * @see TimeSources
-     * */
-    public Countdown start(Duration totalDuration, Duration tickInterval, TimeSource timeSource) {
-        Objects.requireNonNull(totalDuration);
-        Objects.requireNonNull(tickInterval);
-        Objects.requireNonNull(timeSource);
-
-        Countdown countdown = new Countdown(this, totalDuration, tickInterval, timeSource);
-        activeCountdowns.put(countdown.getId(), countdown);
-        countdown.start();
-        return countdown;
-    }
-
-    public Optional<Countdown> get(String id) {
-        return Optional.ofNullable(activeCountdowns.get(id));
+     * Cancels every currently active countdown.
+     * @return true if at least one countdown was cancelled
+     */
+    public boolean cancelAll() {
+        boolean any = false;
+        for (TaskHandle handle : List.copyOf(countdowns.values())) {
+            any |= handle.cancel();
+        }
+        return any;
     }
 
     /**
-     * If you're getting the countdown manager through {@link TimelessLib#getServerCountdownManager()} or the client counterpart you should NOT call this method.
+     * If you're getting the countdown manager through {@code TimelessLib.countdowns()} or the client counterpart you should NOT call this method.
      */
     public void shutdown() {
-        activeCountdowns.values().forEach(Countdown::cancelSilently);
-        activeCountdowns.clear();
+        List.copyOf(countdowns.values()).forEach(TaskHandle::cancel);
+        countdowns.clear();
         executor.shutdownNow();
     }
 
     /**
-     * If you're getting the countdown manager through {@link TimelessLib#getServerCountdownManager()} or the client counterpart you should NOT call this method.
+     * If you're getting the countdown manager through {@code TimelessLib.countdowns()} or the client counterpart you should NOT call this method.
      */
     public void shutdownGracefully(long timeout, TimeUnit unit) throws InterruptedException {
-        activeCountdowns.values().forEach(Countdown::cancelSilently);
+        List.copyOf(countdowns.values()).forEach(TaskHandle::cancel);
+        countdowns.clear();
         executor.shutdown();
         if (!executor.awaitTermination(timeout, unit)) {
             TimelessLib.LOGGER.warn("CountdownManager did not shutdown gracefully within the timeout");
             executor.shutdownNow();
         }
     }
+
+    public boolean isShutdown() { return executor.isShutdown(); }
+    public boolean isTerminated() { return executor.isTerminated(); }
 }

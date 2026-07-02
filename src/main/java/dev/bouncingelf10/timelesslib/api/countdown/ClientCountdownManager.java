@@ -1,84 +1,65 @@
 package dev.bouncingelf10.timelesslib.api.countdown;
 
+import dev.bouncingelf10.timelesslib.InternalAccess;
 import dev.bouncingelf10.timelesslib.api.clock.TimeSource;
 import dev.bouncingelf10.timelesslib.api.clock.TimeSources;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
-import dev.bouncingelf10.timelesslib.api.time.TimeFormat;
-import dev.bouncingelf10.timelesslib.fabric.TimelessFabricHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.Identifier;
 
+import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
- * @see CountdownManager
+ * Countdown factory running against the local {@link Minecraft} client context. <br>
+ * Obtain the shared instance through {@code TimelessLibClient.countdowns()} - this class cannot be constructed by other mods.
  */
-public class ClientCountdownManager<T> extends CountdownManager<T> {
-    public ClientCountdownManager(Supplier<T> contextProvider) {
-        super(contextProvider);
+public final class ClientCountdownManager extends CountdownManager<Minecraft> {
+    public ClientCountdownManager(InternalAccess access, Supplier<Minecraft> contextProvider) {
+        super(access, contextProvider);
     }
 
-    public ClientCountdownManager(Supplier<T> contextProvider, int poolSize) {
-        super(contextProvider, poolSize);
+    public ClientCountdownManager(InternalAccess access, Supplier<Minecraft> contextProvider, int poolSize) {
+        super(access, contextProvider, poolSize);
     }
 
-    public ClientCountdown startClient(Duration total) {
-        Countdown base = super.start(total, Duration.ofMillis(10), TimeSources.GAME_TIME);
-        return new ClientCountdown(base);
+    /**
+     * Starts a countdown with a tick interval of 10ms and the game time source.
+     * @param totalDuration Duration of the countdown.
+     * @return {@link ClientCountdown}
+     * @see TimeSources
+     */
+    public ClientCountdown start(Duration totalDuration) {
+        return start(totalDuration, Duration.ofMillis(10), TimeSources.GAME_TIME);
     }
 
-    public ClientCountdown startClientRealtime(Duration total) {
-        Countdown base = super.start(total, Duration.ofMillis(10), TimeSources.REAL_TIME);
-        return new ClientCountdown(base);
+    /**
+     * Starts a countdown with a tick interval of 10ms and the real time source.
+     * @param totalDuration Duration of the countdown.
+     * @return {@link ClientCountdown}
+     * @see TimeSources
+     */
+    public ClientCountdown startRealtime(Duration totalDuration) {
+        return start(totalDuration, Duration.ofMillis(10), TimeSources.REAL_TIME);
     }
 
-    public ClientCountdown startClient(Duration total, Duration tickEvery, TimeSource timeSource) {
-        Countdown base = super.start(total, tickEvery, timeSource);
-        return new ClientCountdown(base);
-    }
+    /**
+     * Starts a countdown with the specified tick interval and time source.
+     * @param totalDuration Duration of the countdown.
+     * @param tickInterval Tick interval of the countdown.
+     * @param timeSource Time source to use.
+     * @return {@link ClientCountdown}
+     * @see TimeSources
+     */
+    public ClientCountdown start(Duration totalDuration, Duration tickInterval, TimeSource timeSource) {
+        Objects.requireNonNull(totalDuration);
+        Objects.requireNonNull(tickInterval);
+        Objects.requireNonNull(timeSource);
 
-    @SuppressWarnings("unchecked")
-    public class ClientCountdown {
-        private final Countdown base;
-
-        public ClientCountdown(Countdown base) {
-            this.base = base;
-        }
-
-        public ClientCountdown onTick(java.util.function.BiConsumer<T, Duration> handler) {
-            base.onTick((java.util.function.BiConsumer<Object, Duration>) handler);
-            return this;
-        }
-
-        public ClientCountdown onFinish(java.util.function.Consumer<T> handler) {
-            base.onFinish((java.util.function.Consumer<Object>) handler);
-            return this;
-        }
-
-        public ClientCountdown onThreshold(Duration threshold, java.util.function.Consumer<T> handler) {
-            base.onThreshold(threshold, (java.util.function.Consumer<Object>) handler);
-            return this;
-        }
-
-        public ClientCountdown every(Duration interval, java.util.function.Consumer<T> handler) {
-            base.every(interval, (java.util.function.Consumer<Object>) handler);
-            return this;
-        }
-
-        public boolean pause() { return base.pause(); }
-        public boolean resume() { return base.resume(); }
-        public boolean cancel() { return base.cancel(); }
-        public boolean pauseOrUnpause() { return base.pauseOrUnpause(); }
-        public boolean isPaused() { return base.isPaused(); }
-        public boolean isCancelled() { return base.isCancelled(); }
-        public boolean isFinished() { return base.isFinished(); }
-        public Duration remaining() { return base.remaining(); }
-        public String id() { return base.getId(); }
-
-        public ClientCountdown displayToUser() {
-            return every(Duration.TICK, client -> TimelessFabricHelper.clientDisplayToUser(remaining().toNanos()));
-        }
-
-        public ClientCountdown displayToUser(TimeFormat format, String prefix, String suffix) {
-            return every(Duration.TICK, client -> TimelessFabricHelper.clientDisplayToUser(remaining().toNanos(), format, prefix, suffix));
-        }
+        Identifier id = randomId();
+        ClientCountdown countdown = new ClientCountdown(this, id, totalDuration, tickInterval, timeSource);
+        countdowns.put(id, countdown);
+        countdown.start();
+        return countdown;
     }
 }
