@@ -3,8 +3,8 @@ package dev.bouncingelf10.timelesslib;
 import dev.bouncingelf10.timelesslib.api.animation.AnimationManager;
 import dev.bouncingelf10.timelesslib.api.clock.TimelessClock;
 import dev.bouncingelf10.timelesslib.api.cooldown.ServerCooldownManager;
-import dev.bouncingelf10.timelesslib.api.countdown.CountdownManager;
-import dev.bouncingelf10.timelesslib.api.scheduler.Scheduler;
+import dev.bouncingelf10.timelesslib.api.countdown.ServerCountdownManager;
+import dev.bouncingelf10.timelesslib.api.scheduler.ServerScheduler;
 import net.fabricmc.api.ModInitializer;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -18,10 +18,10 @@ public class TimelessLib implements ModInitializer {
 	public static final String MOD_ID = "timelesslib";
 	public static final Logger LOGGER = Logger.getLogger(MOD_ID);
 	@Nullable private static MinecraftServer server;
-	@Nullable private static Scheduler<MinecraftServer> serverScheduler;
-	@Nullable private static CountdownManager<MinecraftServer> serverCountdownManager;
-	@Nullable private static ServerCooldownManager<MinecraftServer> serverCooldownManager;
-    @Nullable private static AnimationManager serverAnimationManager;
+	@Nullable private static ServerScheduler scheduler;
+	@Nullable private static ServerCountdownManager countdowns;
+	@Nullable private static ServerCooldownManager cooldowns;
+    @Nullable private static AnimationManager animations;
 
 	@Override
 	public void onInitialize() {
@@ -30,25 +30,25 @@ public class TimelessLib implements ModInitializer {
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			LOGGER.info("TimelessLib Initialised for Server");
 			TimelessLib.server = server;
-			serverScheduler = new Scheduler<>(() -> server);
-			serverCountdownManager = new CountdownManager<>(() -> server);
-			serverCooldownManager = new ServerCooldownManager<>(() -> server);
-            serverAnimationManager = new AnimationManager();
+			scheduler = new ServerScheduler(InternalAccess.issue(), () -> server);
+			countdowns = new ServerCountdownManager(InternalAccess.issue(), () -> server);
+			cooldowns = new ServerCooldownManager(InternalAccess.issue(), countdowns);
+            animations = new AnimationManager(InternalAccess.issue());
 		});
 
 		ServerLifecycleEvents.SERVER_STOPPED.register(server ->  {
 			LOGGER.info("TimelessLib Stopped for Server");
 			TimelessLib.server = null;
-			serverScheduler = null;
-			serverCountdownManager = null;
-			serverCooldownManager = null;
-            serverAnimationManager = null;
+			scheduler = null;
+			countdowns = null;
+			cooldowns = null;
+            animations = null;
 		});
 
         ServerTickEvents.END_SERVER_TICK.register(server -> TimelessClock.update());
         ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (serverAnimationManager == null) return;
-            serverAnimationManager.update();
+            if (animations == null) return;
+            animations.update();
         });
 	}
 
@@ -70,13 +70,13 @@ public class TimelessLib implements ModInitializer {
 	}
 
     /**
-     * Gets the server scheduler. Will throw an exception if the server is not initialized.
+     * Gets the server task scheduler - for one-off delays, repeating tasks, and step sequences. Will throw an exception if the server is not initialized.
      * @return Server scheduler
      * @throws IllegalStateException
      */
-	public static Scheduler<MinecraftServer> getServerScheduler() throws IllegalStateException {
-        if (serverScheduler == null) throw new IllegalStateException("Server Scheduler is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
-		return serverScheduler;
+	public static ServerScheduler scheduler() throws IllegalStateException {
+        if (scheduler == null) throw new IllegalStateException("Server Scheduler is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
+		return scheduler;
 	}
 
     /**
@@ -84,9 +84,9 @@ public class TimelessLib implements ModInitializer {
      * @return Server countdown manager
      * @throws IllegalStateException
      */
-	public static CountdownManager<MinecraftServer> getServerCountdownManager() throws IllegalStateException {
-        if (serverCountdownManager == null) throw new IllegalStateException("Server CountdownManager is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
-		return serverCountdownManager;
+	public static ServerCountdownManager countdowns() throws IllegalStateException {
+        if (countdowns == null) throw new IllegalStateException("Server CountdownManager is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
+		return countdowns;
 	}
 
     /**
@@ -94,9 +94,9 @@ public class TimelessLib implements ModInitializer {
      * @return Server cooldown manager
      * @throws IllegalStateException
      */
-	public static ServerCooldownManager<MinecraftServer> getServerCooldownManager() throws IllegalStateException {
-        if (serverCooldownManager == null) throw new IllegalStateException("Server CooldownManager is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
-		return serverCooldownManager;
+	public static ServerCooldownManager cooldowns() throws IllegalStateException {
+        if (cooldowns == null) throw new IllegalStateException("Server CooldownManager is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
+		return cooldowns;
 	}
 
     /**
@@ -104,8 +104,8 @@ public class TimelessLib implements ModInitializer {
      * @return Server animation manager
      * @throws IllegalStateException
      */
-    public static AnimationManager getServerAnimationManager() throws IllegalStateException {
-        if (serverAnimationManager == null) throw new IllegalStateException("Server KeyframeManager is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
-        return serverAnimationManager;
+    public static AnimationManager animations() throws IllegalStateException {
+        if (animations == null) throw new IllegalStateException("Server AnimationManager is null! This likely happened due to the server not being initialized. See TimelessLib#isServerInitialized()");
+        return animations;
     }
 }
