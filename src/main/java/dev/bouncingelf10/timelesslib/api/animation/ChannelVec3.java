@@ -199,6 +199,14 @@ public class ChannelVec3 {
         boundConsumer.accept(outputValue);
     }
 
+    public ChannelVec3 copy() {
+        ChannelVec3 copy = new ChannelVec3(this.name);
+        copy.keyframes.addAll(this.keyframes);
+        copy.defaultInterpolation = this.defaultInterpolation;
+        copy.defaultEasing = this.defaultEasing;
+        return copy;
+    }
+
     private double catmullRom(double p0, double p1, double p2, double p3, double t) {
         double t2 = t * t;
         double t3 = t2 * t;
