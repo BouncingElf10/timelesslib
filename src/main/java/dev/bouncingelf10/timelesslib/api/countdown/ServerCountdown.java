@@ -5,7 +5,7 @@ import dev.bouncingelf10.timelesslib.api.time.Duration;
 import dev.bouncingelf10.timelesslib.api.time.TimeFormat;
 import dev.bouncingelf10.timelesslib.fabric.TimelessFabricHelper;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.phys.Vec3;
@@ -15,7 +15,7 @@ import net.minecraft.world.phys.Vec3;
  * @see ServerCountdownManager#start(Duration)
  */
 public final class ServerCountdown extends Countdown<MinecraftServer, ServerCountdown> {
-    ServerCountdown(CountdownManager<MinecraftServer> manager, ResourceLocation id, Duration totalDuration, Duration tickInterval, TimeSource timeSource) {
+    ServerCountdown(CountdownManager<MinecraftServer> manager, Identifier id, Duration totalDuration, Duration tickInterval, TimeSource timeSource) {
         super(manager, id, totalDuration, tickInterval, timeSource);
     }
 

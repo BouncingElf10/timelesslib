@@ -5,14 +5,14 @@ import dev.bouncingelf10.timelesslib.api.clock.TimeSources;
 import dev.bouncingelf10.timelesslib.api.clock.TimelessClock;
 import dev.bouncingelf10.timelesslib.api.animation.keyframes.KeyframeDouble;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.*;
 import java.util.function.Consumer;
 
 public class AnimationTimeline {
-    private ResourceLocation timelineId;
+    private Identifier timelineId;
 
     private final Map<String, ChannelDouble> doubleChannels = new LinkedHashMap<>();
     private final Map<String, ChannelVec3> vec3Channels = new LinkedHashMap<>();
@@ -38,11 +38,11 @@ public class AnimationTimeline {
     private TimeSource timeSource = TimeSources.GAME_TIME;
     private long lastTimelineNanoTime = timeSource.now();
 
-    AnimationTimeline(ResourceLocation timelineId) {
+    AnimationTimeline(Identifier timelineId) {
         this.timelineId = Objects.requireNonNull(timelineId);
     }
 
-    public ResourceLocation id() { return timelineId; }
+    public Identifier id() { return timelineId; }
 
     public AnimationTimeline loop(boolean enabled) { this.loop = enabled; return this; }
     public AnimationTimeline pingPong(boolean enabled) { this.pingPong = enabled; return this; }
@@ -288,7 +288,7 @@ public class AnimationTimeline {
      * Useful for procedural timelines - see {@link #copy()}.
      */
     public AnimationTimeline randomiseId() {
-        this.timelineId = ResourceLocation.fromNamespaceAndPath(this.timelineId.getNamespace(), this.timelineId.getPath() + "-" + UUID.randomUUID());
+        this.timelineId = Identifier.fromNamespaceAndPath(this.timelineId.getNamespace(), this.timelineId.getPath() + "-" + UUID.randomUUID());
         return this;
     }
 }

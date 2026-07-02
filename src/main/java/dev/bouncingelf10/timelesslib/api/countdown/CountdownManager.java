@@ -3,7 +3,7 @@ package dev.bouncingelf10.timelesslib.api.countdown;
 import dev.bouncingelf10.timelesslib.InternalAccess;
 import dev.bouncingelf10.timelesslib.TimelessLib;
 import dev.bouncingelf10.timelesslib.api.scheduler.TaskHandle;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -27,7 +27,7 @@ abstract class CountdownManager<T> {
     static final String AUTO_ID_NAMESPACE = "timelesslib";
 
     final ScheduledThreadPoolExecutor executor;
-    final Map<ResourceLocation, TaskHandle> countdowns = new ConcurrentHashMap<>();
+    final Map<Identifier, TaskHandle> countdowns = new ConcurrentHashMap<>();
     final Supplier<T> contextProvider;
     final BiConsumer<T, Runnable> mainThreadDispatcher;
 
@@ -64,8 +64,8 @@ abstract class CountdownManager<T> {
         }
     }
 
-    static ResourceLocation randomId() {
-        return ResourceLocation.fromNamespaceAndPath(AUTO_ID_NAMESPACE, UUID.randomUUID().toString());
+    static Identifier randomId() {
+        return Identifier.fromNamespaceAndPath(AUTO_ID_NAMESPACE, UUID.randomUUID().toString());
     }
 
     /**
@@ -73,7 +73,7 @@ abstract class CountdownManager<T> {
      * @param id Countdown ID
      * @return {@link TaskHandle} or empty if no active countdown has that ID
      */
-    public Optional<TaskHandle> get(ResourceLocation id) {
+    public Optional<TaskHandle> get(Identifier id) {
         return Optional.ofNullable(countdowns.get(id));
     }
 

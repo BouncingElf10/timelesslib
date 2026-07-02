@@ -1,7 +1,7 @@
 package dev.bouncingelf10.timelesslib.api.scheduler;
 
 import dev.bouncingelf10.timelesslib.api.time.Duration;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +47,7 @@ public final class Sequence<T> {
      * Starts the sequence under the given ID.
      * @throws IllegalArgumentException if a task with the specified ID already exists
      */
-    public TaskHandle start(ResourceLocation id) {
+    public TaskHandle start(Identifier id) {
         if (scheduler.tasks.containsKey(id)) {
             throw new IllegalArgumentException("Task ID already exists: " + id);
         }

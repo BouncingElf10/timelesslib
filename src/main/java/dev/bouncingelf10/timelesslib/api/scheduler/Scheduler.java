@@ -3,7 +3,7 @@ package dev.bouncingelf10.timelesslib.api.scheduler;
 import dev.bouncingelf10.timelesslib.InternalAccess;
 import dev.bouncingelf10.timelesslib.TimelessLib;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.lang.reflect.Method;
 import java.util.*;
@@ -24,7 +24,7 @@ abstract class Scheduler<T> {
     static final String AUTO_ID_NAMESPACE = "timelesslib";
 
     final ScheduledThreadPoolExecutor executor;
-    final Map<ResourceLocation, TaskHandle> tasks = new ConcurrentHashMap<>();
+    final Map<Identifier, TaskHandle> tasks = new ConcurrentHashMap<>();
     final Supplier<T> contextProvider;
     final BiConsumer<T, Runnable> mainThreadDispatcher;
     final ErrorHandler errorHandler;
@@ -37,7 +37,7 @@ abstract class Scheduler<T> {
     }
 
     public interface ErrorHandler {
-        void onError(ResourceLocation taskId, Throwable t);
+        void onError(Identifier taskId, Throwable t);
     }
 
     Scheduler(InternalAccess access, Supplier<T> contextProvider) {
@@ -84,8 +84,8 @@ abstract class Scheduler<T> {
         }
     }
 
-    static ResourceLocation randomId() {
-        return ResourceLocation.fromNamespaceAndPath(AUTO_ID_NAMESPACE, UUID.randomUUID().toString());
+    static Identifier randomId() {
+        return Identifier.fromNamespaceAndPath(AUTO_ID_NAMESPACE, UUID.randomUUID().toString());
     }
 
     /**
@@ -116,7 +116,7 @@ abstract class Scheduler<T> {
      * @return {@link TaskHandle}
      * @throws IllegalArgumentException if a task with the specified ID already exists
      */
-    public TaskHandle after(ResourceLocation id, Duration delay, Consumer<T> task) {
+    public TaskHandle after(Identifier id, Duration delay, Consumer<T> task) {
         return scheduleInternal(id, delay, null, () -> task.accept(contextProvider.get()), false, false);
     }
 
@@ -128,7 +128,7 @@ abstract class Scheduler<T> {
      * @return {@link TaskHandle}
      * @throws IllegalArgumentException if a task with the specified ID already exists
      */
-    public TaskHandle after(ResourceLocation id, Duration delay, Runnable task) {
+    public TaskHandle after(Identifier id, Duration delay, Runnable task) {
         return after(id, delay, ctx -> task.run());
     }
 
@@ -206,7 +206,7 @@ abstract class Scheduler<T> {
      * @param id Task ID
      * @return {@link TaskHandle} or empty if no active task has that ID
      */
-    public Optional<TaskHandle> get(ResourceLocation id) {
+    public Optional<TaskHandle> get(Identifier id) {
         return Optional.ofNullable(tasks.get(id));
     }
 
@@ -254,11 +254,11 @@ abstract class Scheduler<T> {
     public boolean isShutdown() { return executor.isShutdown(); }
     public boolean isTerminated() { return executor.isTerminated(); }
 
-    private TaskHandle scheduleInternal(ResourceLocation idOverride, Duration initialDelay, Duration period, Runnable userTask, boolean repeating, boolean fixedRate) {
+    private TaskHandle scheduleInternal(Identifier idOverride, Duration initialDelay, Duration period, Runnable userTask, boolean repeating, boolean fixedRate) {
         Objects.requireNonNull(initialDelay);
         Objects.requireNonNull(userTask);
 
-        ResourceLocation id = (idOverride != null ? idOverride : randomId());
+        Identifier id = (idOverride != null ? idOverride : randomId());
         if (tasks.containsKey(id)) {
             throw new IllegalArgumentException("Task ID already exists: " + id);
         }
@@ -272,7 +272,7 @@ abstract class Scheduler<T> {
     }
 
     private class ScheduledTask implements TaskHandle {
-        private final ResourceLocation id;
+        private final Identifier id;
         private final Runnable userTask;
         private final boolean repeating;
         private final boolean fixedRate;
@@ -291,7 +291,7 @@ abstract class Scheduler<T> {
             return System.nanoTime();
         }
 
-        ScheduledTask(ResourceLocation id, Duration initialDelay, Duration period, Runnable userTask, boolean repeating, boolean fixedRate) {
+        ScheduledTask(Identifier id, Duration initialDelay, Duration period, Runnable userTask, boolean repeating, boolean fixedRate) {
             this.id = id;
             this.userTask = userTask;
             this.repeating = repeating;
@@ -418,6 +418,6 @@ abstract class Scheduler<T> {
             return true;
         }
 
-        @Override public ResourceLocation id() { return id; }
+        @Override public Identifier id() { return id; }
     }
 }

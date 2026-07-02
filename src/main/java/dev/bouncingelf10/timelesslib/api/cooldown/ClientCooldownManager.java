@@ -5,7 +5,7 @@ import dev.bouncingelf10.timelesslib.api.clock.TimeSource;
 import dev.bouncingelf10.timelesslib.api.countdown.ClientCountdown;
 import dev.bouncingelf10.timelesslib.api.countdown.ClientCountdownManager;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.List;
 import java.util.Objects;
@@ -56,27 +56,27 @@ public final class ClientCooldownManager extends AbstractCooldownManager {
         );
     }
 
-    public Cooldown start(ResourceLocation key, Duration duration) {
+    public Cooldown start(Identifier key, Duration duration) {
         return super.start(localClient, key, duration);
     }
 
-    public Cooldown startRealtime(ResourceLocation key, Duration duration) {
+    public Cooldown startRealtime(Identifier key, Duration duration) {
         return super.startRealtime(localClient, key, duration);
     }
 
-    public Cooldown startIfAbsent(ResourceLocation key, Duration duration, TimeSource timeSource) {
+    public Cooldown startIfAbsent(Identifier key, Duration duration, TimeSource timeSource) {
         return super.startIfAbsent(localClient, key, duration, timeSource);
     }
 
-    public boolean isReady(ResourceLocation key) {
+    public boolean isReady(Identifier key) {
         return super.isReady(localClient, key);
     }
 
-    public Duration remaining(ResourceLocation key) {
+    public Duration remaining(Identifier key) {
         return super.remaining(localClient, key);
     }
 
-    public void reset(ResourceLocation key) {
+    public void reset(Identifier key) {
         super.reset(localClient, key);
     }
 
