@@ -1,6 +1,5 @@
-package dev.bouncingelf10.timelesslib.api.animation.channels;
+package dev.bouncingelf10.timelesslib.api.animation;
 
-import dev.bouncingelf10.timelesslib.api.animation.*;
 import dev.bouncingelf10.timelesslib.api.animation.keyframes.KeyframeDouble;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
 
@@ -14,7 +13,7 @@ public class ChannelDouble {
     private Easing defaultEasing = null;
     private Consumer<Double> boundConsumer = value -> {};
 
-    public ChannelDouble(String name) {
+    ChannelDouble(String name) {
         this.name = Objects.requireNonNull(name);
     }
 
@@ -201,7 +200,7 @@ public class ChannelDouble {
         copy.defaultEasing = this.defaultEasing;
         return copy;
     }
-    
+
     private double catmullRom(double p0, double p1, double p2, double p3, double t) {
         double t2 = t * t;
         double t3 = t2 * t;

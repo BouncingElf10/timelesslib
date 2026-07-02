@@ -85,7 +85,7 @@ publishMods {
 	additionalFiles.from(tasks.remapSourcesJar.archiveFile)
 	additionalFiles.from(tasks.javadocJar.archiveFile)
 
-	changelog = "added copy() method to timelines and channels"
+	changelog = "2.0.0: API Consistency and bugfixes"
 	type = STABLE
 	modLoaders.add("fabric")
 

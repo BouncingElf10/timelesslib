@@ -1,7 +1,5 @@
 package dev.bouncingelf10.timelesslib.api.animation;
 
-import dev.bouncingelf10.timelesslib.api.animation.channels.ChannelDouble;
-
 public enum Interpolation {
     /**
      * Step interpolation, i.e., the value at the start of the keyframe is returned.
