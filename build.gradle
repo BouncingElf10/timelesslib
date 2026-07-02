@@ -56,7 +56,7 @@ publishMods {
 	additionalFiles.from(tasks.sourcesJar.archiveFile)
 	additionalFiles.from(tasks.javadocJar.archiveFile)
 
-	changelog = "added 26.1.1 support"
+	changelog = "2.0.0: API Consistency and bugfixes"
 	type = STABLE
 	modLoaders.add("fabric")
 
