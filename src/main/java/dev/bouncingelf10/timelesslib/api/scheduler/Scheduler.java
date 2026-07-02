@@ -1,21 +1,33 @@
 package dev.bouncingelf10.timelesslib.api.scheduler;
 
+import dev.bouncingelf10.timelesslib.InternalAccess;
 import dev.bouncingelf10.timelesslib.TimelessLib;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
+import net.minecraft.resources.ResourceLocation;
 
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class Scheduler<T> {
+/**
+ * Shared task-scheduling engine backing {@link dev.bouncingelf10.timelesslib.api.scheduler.ServerScheduler}
+ * and {@link dev.bouncingelf10.timelesslib.api.scheduler.ClientScheduler}. <br>
+ * Not exposed directly - use one of those two classes instead, obtained through
+ * {@code TimelessLib.scheduler()} / {@code TimelessLibClient.scheduler()}.
+ */
+abstract class Scheduler<T> {
+    static final String AUTO_ID_NAMESPACE = "timelesslib";
 
-    private final ScheduledThreadPoolExecutor executor;
-    private final Map<String, ScheduledTask> tasks = new ConcurrentHashMap<>();
-    private final Supplier<T> contextProvider;
-    private final ErrorHandler errorHandler;
+    final ScheduledThreadPoolExecutor executor;
+    final Map<ResourceLocation, TaskHandle> tasks = new ConcurrentHashMap<>();
+    final Supplier<T> contextProvider;
+    final BiConsumer<T, Runnable> mainThreadDispatcher;
+    final ErrorHandler errorHandler;
 
     public static class Config {
         public int poolSize = Math.max(1, Runtime.getRuntime().availableProcessors());
@@ -25,16 +37,18 @@ public class Scheduler<T> {
     }
 
     public interface ErrorHandler {
-        void onError(String taskId, Throwable t);
+        void onError(ResourceLocation taskId, Throwable t);
     }
 
-    public Scheduler(Supplier<T> contextProvider) {
-        this(contextProvider, new Config());
+    Scheduler(InternalAccess access, Supplier<T> contextProvider) {
+        this(access, contextProvider, new Config());
     }
 
-    public Scheduler(Supplier<T> contextProvider, Config config) {
+    Scheduler(InternalAccess access, Supplier<T> contextProvider, Config config) {
+        Objects.requireNonNull(access, "Managers can only be constructed by TimelessLib");
         this.contextProvider = Objects.requireNonNull(contextProvider);
         this.errorHandler = Objects.requireNonNull(config.errorHandler);
+        this.mainThreadDispatcher = detectDispatcher(contextProvider);
 
         ThreadFactory factory = config.threadFactory;
         if (config.daemonThreads) {
@@ -49,6 +63,31 @@ public class Scheduler<T> {
         this.executor.setRemoveOnCancelPolicy(true);
     }
 
+    static <T> BiConsumer<T, Runnable> detectDispatcher(Supplier<T> contextSupplier) {
+        T context = contextSupplier.get();
+        if (context == null)
+            throw new IllegalArgumentException("Context provider returned null when probing for execute(Runnable).");
+
+        try {
+            Method executeMethod = context.getClass().getMethod("execute", Runnable.class);
+            executeMethod.setAccessible(true);
+            return (ctx, runnable) -> {
+                try { executeMethod.invoke(ctx, runnable); }
+                catch (RuntimeException re) { throw re; }
+                catch (Exception e) {
+                    TimelessLib.LOGGER.error("Failed to dispatch task to main thread", e);
+                    throw new RuntimeException(e);
+                }
+            };
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException("Context type " + context.getClass().getName() + " does not expose execute(Runnable).", e);
+        }
+    }
+
+    static ResourceLocation randomId() {
+        return new ResourceLocation(AUTO_ID_NAMESPACE, UUID.randomUUID().toString());
+    }
+
     /**
      * Schedules a task to run after the specified delay.
      * @param delay Delay before running the task
@@ -61,14 +100,36 @@ public class Scheduler<T> {
 
     /**
      * Schedules a task to run after the specified delay.
+     * @param delay Delay before running the task
+     * @param task Task to run
+     * @return {@link TaskHandle}
+     */
+    public TaskHandle after(Duration delay, Runnable task) {
+        return after(delay, ctx -> task.run());
+    }
+
+    /**
+     * Schedules a task to run after the specified delay.
      * @param id Unique ID for the task
      * @param delay Delay before running the task
      * @param task Task to run
      * @return {@link TaskHandle}
      * @throws IllegalArgumentException if a task with the specified ID already exists
      */
-    public TaskHandle after(String id, Duration delay, Consumer<T> task) {
+    public TaskHandle after(ResourceLocation id, Duration delay, Consumer<T> task) {
         return scheduleInternal(id, delay, null, () -> task.accept(contextProvider.get()), false, false);
+    }
+
+    /**
+     * Schedules a task to run after the specified delay.
+     * @param id Unique ID for the task
+     * @param delay Delay before running the task
+     * @param task Task to run
+     * @return {@link TaskHandle}
+     * @throws IllegalArgumentException if a task with the specified ID already exists
+     */
+    public TaskHandle after(ResourceLocation id, Duration delay, Runnable task) {
+        return after(id, delay, ctx -> task.run());
     }
 
     /**
@@ -82,14 +143,35 @@ public class Scheduler<T> {
     }
 
     /**
+     * Schedules a repeating task to run at the specified interval.
+     * @param period Interval between runs
+     * @param task Task to run
+     * @return {@link TaskHandle}
+     */
+    public TaskHandle every(Duration period, Runnable task) {
+        return every(period, ctx -> task.run());
+    }
+
+    /**
      * Schedules a repeating task to run at the specified interval, with a fixed delay between runs.<br>
      * E.g. {@link #every(Duration, Consumer)} will run the interval after the task has finished executing, whereas this method will run the interval immediately after the task starts executing.
-     * @param period
-     * @param task
+     * @param period Interval between runs
+     * @param task Task to run
      * @return {@link TaskHandle}
      */
     public TaskHandle everyFixedRate(Duration period, Consumer<T> task) {
         return scheduleInternal(null, period, period, () -> task.accept(contextProvider.get()), true, true);
+    }
+
+    /**
+     * Schedules a repeating task to run at the specified interval, with a fixed delay between runs.<br>
+     * E.g. {@link #every(Duration, Runnable)} will run the interval after the task has finished executing, whereas this method will run the interval immediately after the task starts executing.
+     * @param period Interval between runs
+     * @param task Task to run
+     * @return {@link TaskHandle}
+     */
+    public TaskHandle everyFixedRate(Duration period, Runnable task) {
+        return everyFixedRate(period, ctx -> task.run());
     }
 
     /**
@@ -112,32 +194,71 @@ public class Scheduler<T> {
     }
 
     /**
-     * If you're getting the scheduler through {@link TimelessLib#getServerScheduler()} or the client counterpart you should NOT call this method.
+     * Starts building a sequence of delayed steps that run one after another - "wait, then do this, then wait, then do that".
+     * @return {@link Sequence} builder
+     */
+    public Sequence<T> sequence() {
+        return new Sequence<>(this);
+    }
+
+    /**
+     * Looks up an active task (or sequence) by its ID.
+     * @param id Task ID
+     * @return {@link TaskHandle} or empty if no active task has that ID
+     */
+    public Optional<TaskHandle> get(ResourceLocation id) {
+        return Optional.ofNullable(tasks.get(id));
+    }
+
+    /**
+     * @return the number of currently active tasks and sequences.
+     */
+    public int activeTaskCount() {
+        return tasks.size();
+    }
+
+    /**
+     * Cancels every currently active task and sequence.
+     * @return true if at least one task was cancelled
+     */
+    public boolean cancelAll() {
+        boolean any = false;
+        for (TaskHandle handle : List.copyOf(tasks.values())) {
+            any |= handle.cancel();
+        }
+        return any;
+    }
+
+    /**
+     * If you're getting the scheduler through {@code TimelessLib.scheduler()} or the client counterpart you should NOT call this method.
      */
     public void shutdown() {
-        tasks.values().forEach(ScheduledTask::cancelSilently);
+        List.copyOf(tasks.values()).forEach(TaskHandle::cancel);
         tasks.clear();
         executor.shutdownNow();
     }
 
     /**
-     * If you're getting the scheduler through {@link TimelessLib#getServerScheduler()} or the client counterpart you should NOT call this method.
+     * If you're getting the scheduler through {@code TimelessLib.scheduler()} or the client counterpart you should NOT call this method.
      */
     public void shutdownGracefully(long timeout, TimeUnit unit) throws InterruptedException {
-        tasks.values().forEach(ScheduledTask::cancelSilently);
+        List.copyOf(tasks.values()).forEach(TaskHandle::cancel);
         tasks.clear();
         executor.shutdown();
-        executor.awaitTermination(timeout, unit);
+        if (!executor.awaitTermination(timeout, unit)) {
+            TimelessLib.LOGGER.warn("Scheduler did not shutdown gracefully within the timeout");
+            executor.shutdownNow();
+        }
     }
 
     public boolean isShutdown() { return executor.isShutdown(); }
     public boolean isTerminated() { return executor.isTerminated(); }
 
-    private TaskHandle scheduleInternal(String idOverride, Duration initialDelay, Duration period, Runnable userTask, boolean repeating, boolean fixedRate) {
+    private TaskHandle scheduleInternal(ResourceLocation idOverride, Duration initialDelay, Duration period, Runnable userTask, boolean repeating, boolean fixedRate) {
         Objects.requireNonNull(initialDelay);
         Objects.requireNonNull(userTask);
 
-        String id = (idOverride != null ? idOverride : UUID.randomUUID().toString());
+        ResourceLocation id = (idOverride != null ? idOverride : randomId());
         if (tasks.containsKey(id)) {
             throw new IllegalArgumentException("Task ID already exists: " + id);
         }
@@ -151,7 +272,7 @@ public class Scheduler<T> {
     }
 
     private class ScheduledTask implements TaskHandle {
-        private final String id;
+        private final ResourceLocation id;
         private final Runnable userTask;
         private final boolean repeating;
         private final boolean fixedRate;
@@ -170,7 +291,7 @@ public class Scheduler<T> {
             return System.nanoTime();
         }
 
-        ScheduledTask(String id, Duration initialDelay, Duration period, Runnable userTask, boolean repeating, boolean fixedRate) {
+        ScheduledTask(ResourceLocation id, Duration initialDelay, Duration period, Runnable userTask, boolean repeating, boolean fixedRate) {
             this.id = id;
             this.userTask = userTask;
             this.repeating = repeating;
@@ -235,11 +356,6 @@ public class Scheduler<T> {
             return true;
         }
 
-        void cancelSilently() {
-            cancelled.set(true);
-            if (future != null) future.cancel(false);
-        }
-
         @Override
         public boolean pause() {
             if (cancelled.get() || !paused.compareAndSet(false, true)) return false;
@@ -302,6 +418,6 @@ public class Scheduler<T> {
             return true;
         }
 
-        @Override public String id() { return id; }
+        @Override public ResourceLocation id() { return id; }
     }
 }
