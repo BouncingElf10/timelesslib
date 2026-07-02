@@ -4,7 +4,7 @@ import dev.bouncingelf10.timelesslib.TimelessLib;
 import dev.bouncingelf10.timelesslib.api.clock.TimeSource;
 import dev.bouncingelf10.timelesslib.api.scheduler.TaskHandle;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,7 +27,7 @@ import java.util.function.Consumer;
 public abstract class Countdown<T, SELF extends Countdown<T, SELF>> implements TaskHandle {
     private final CountdownManager<T> manager;
 
-    private final ResourceLocation id;
+    private final Identifier id;
     private final TimeSource timeSource;
     private final Duration totalDuration;
     private final long totalNanos;
@@ -51,7 +51,7 @@ public abstract class Countdown<T, SELF extends Countdown<T, SELF>> implements T
     @SuppressWarnings("unchecked")
     private SELF self() { return (SELF) this; }
 
-    Countdown(CountdownManager<T> manager, ResourceLocation id, Duration totalDuration, Duration tickInterval, TimeSource timeSource) {
+    Countdown(CountdownManager<T> manager, Identifier id, Duration totalDuration, Duration tickInterval, TimeSource timeSource) {
         this.manager = manager;
         this.id = id;
         this.totalDuration = totalDuration;
@@ -243,7 +243,7 @@ public abstract class Countdown<T, SELF extends Countdown<T, SELF>> implements T
         return Math.min(1.0, Math.max(0.0, 1.0 - ((double) remaining().toNanos() / totalNanos)));
     }
 
-    @Override public ResourceLocation id() { return id; }
+    @Override public Identifier id() { return id; }
 
     /**
      * Adds a task to execute every countdown tick specified by the tick interval.

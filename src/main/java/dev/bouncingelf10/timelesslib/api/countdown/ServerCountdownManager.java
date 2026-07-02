@@ -4,7 +4,7 @@ import dev.bouncingelf10.timelesslib.InternalAccess;
 import dev.bouncingelf10.timelesslib.api.clock.TimeSource;
 import dev.bouncingelf10.timelesslib.api.clock.TimeSources;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 
 import java.util.Objects;
@@ -56,7 +56,7 @@ public final class ServerCountdownManager extends CountdownManager<MinecraftServ
         Objects.requireNonNull(tickInterval);
         Objects.requireNonNull(timeSource);
 
-        ResourceLocation id = randomId();
+        Identifier id = randomId();
         ServerCountdown countdown = new ServerCountdown(this, id, totalDuration, tickInterval, timeSource);
         countdowns.put(id, countdown);
         countdown.start();

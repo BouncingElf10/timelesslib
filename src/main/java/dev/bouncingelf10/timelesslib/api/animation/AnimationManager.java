@@ -1,7 +1,7 @@
 package dev.bouncingelf10.timelesslib.api.animation;
 
 import dev.bouncingelf10.timelesslib.InternalAccess;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,13 +12,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * this class cannot be constructed by other mods.
  */
 public class AnimationManager {
-    private final Map<ResourceLocation, AnimationTimeline> timelines = new ConcurrentHashMap<>();
+    private final Map<Identifier, AnimationTimeline> timelines = new ConcurrentHashMap<>();
 
     public AnimationManager(InternalAccess access) {
         Objects.requireNonNull(access, "Managers can only be constructed by TimelessLib");
     }
 
-    public AnimationTimeline createTimeline(ResourceLocation id) {
+    public AnimationTimeline createTimeline(Identifier id) {
         Objects.requireNonNull(id);
         AnimationTimeline timeline = new AnimationTimeline(id);
         return addTimeline(timeline);
@@ -29,7 +29,7 @@ public class AnimationManager {
      * @param id Timeline ID
      * @return {@link AnimationTimeline}
      */
-    public AnimationTimeline getOrCreateTimeline(ResourceLocation id) {
+    public AnimationTimeline getOrCreateTimeline(Identifier id) {
         return getTimeline(id).orElseGet(() -> createTimeline(id));
     }
 
@@ -45,11 +45,11 @@ public class AnimationManager {
      * @param id Timeline ID
      * @return {@link AnimationTimeline} or empty
      */
-    public Optional<AnimationTimeline> getTimeline(ResourceLocation id) {
+    public Optional<AnimationTimeline> getTimeline(Identifier id) {
         return Optional.ofNullable(timelines.get(id));
     }
 
-    public boolean removeTimeline(ResourceLocation id) { return timelines.remove(id) != null; }
+    public boolean removeTimeline(Identifier id) { return timelines.remove(id) != null; }
 
     /**
      * Pauses every registered timeline.

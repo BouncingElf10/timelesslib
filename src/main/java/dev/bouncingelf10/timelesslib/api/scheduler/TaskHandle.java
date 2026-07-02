@@ -1,7 +1,7 @@
 package dev.bouncingelf10.timelesslib.api.scheduler;
 
 import dev.bouncingelf10.timelesslib.api.time.Duration;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.Optional;
 
@@ -70,5 +70,5 @@ public interface TaskHandle {
     /**
      * @return unique ID of this task
      */
-    ResourceLocation id();
+    Identifier id();
 }
