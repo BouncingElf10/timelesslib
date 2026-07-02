@@ -56,7 +56,7 @@ publishMods {
 	additionalFiles.from(tasks.sourcesJar.archiveFile)
 	additionalFiles.from(tasks.javadocJar.archiveFile)
 
-	changelog = "changed default daemonThreads to true"
+	changelog = "2.0.0: API Consistency and bugfixes"
 	type = STABLE
 	modLoaders.add("fabric")
 

@@ -1,21 +1,31 @@
 package dev.bouncingelf10.timelesslib.api.cooldown;
 
+import dev.bouncingelf10.timelesslib.InternalAccess;
 import dev.bouncingelf10.timelesslib.api.clock.TimeSource;
-import dev.bouncingelf10.timelesslib.api.countdown.Countdown;
+import dev.bouncingelf10.timelesslib.api.countdown.ClientCountdown;
+import dev.bouncingelf10.timelesslib.api.countdown.ClientCountdownManager;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
+import net.minecraft.resources.Identifier;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
-import java.util.function.Supplier;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 /**
- * A Cooldown manager that tracks cooldowns for the local client
+ * Tracks cooldowns for the local client, keyed by a namespaced key. <br>
+ * Obtain the shared instance through {@code TimelessLibClient.cooldowns()} - this class cannot be constructed by other mods.
  * @see AbstractCooldownManager
  */
-public class ClientCooldownManager<T> extends AbstractCooldownManager<T> {
+public final class ClientCooldownManager extends AbstractCooldownManager {
+    private final ClientCountdownManager countdowns;
     private final UUID localClient;
 
-    public ClientCooldownManager(Supplier<T> ctx, UUID localClient) {
-        super(ctx);
-        this.localClient = localClient;
+    public ClientCooldownManager(InternalAccess access, ClientCountdownManager countdowns, UUID localClient) {
+        Objects.requireNonNull(access, "Managers can only be constructed by TimelessLib");
+        this.countdowns = Objects.requireNonNull(countdowns);
+        this.localClient = Objects.requireNonNull(localClient);
     }
 
     @Override
@@ -23,27 +33,50 @@ public class ClientCooldownManager<T> extends AbstractCooldownManager<T> {
         return localClient;
     }
 
-    public Countdown start(String key, Duration duration) {
+    @Override
+    protected Cooldown newCooldown(Duration duration, Duration tickInterval, TimeSource timeSource, Runnable onFinishCleanup) {
+        ClientCountdown underlying = countdowns.start(duration, tickInterval, timeSource);
+
+        List<Runnable> readyHandlers = new CopyOnWriteArrayList<>();
+        AtomicBoolean fired = new AtomicBoolean(false);
+        Runnable fireReady = () -> {
+            if (fired.compareAndSet(false, true)) {
+                onFinishCleanup.run();
+                readyHandlers.forEach(Runnable::run);
+            }
+        };
+        underlying.onFinish(fireReady);
+
+        return new Cooldown(
+                () -> underlying.isFinished() || underlying.isCancelled(),
+                underlying::remaining,
+                underlying::progress,
+                () -> { underlying.cancel(); fireReady.run(); },
+                readyHandlers::add
+        );
+    }
+
+    public Cooldown start(Identifier key, Duration duration) {
         return super.start(localClient, key, duration);
     }
 
-    public Countdown startRealtime(String key, Duration duration) {
+    public Cooldown startRealtime(Identifier key, Duration duration) {
         return super.startRealtime(localClient, key, duration);
     }
 
-    public Countdown startIfAbsent(String key, Duration duration, TimeSource timeSource) {
+    public Cooldown startIfAbsent(Identifier key, Duration duration, TimeSource timeSource) {
         return super.startIfAbsent(localClient, key, duration, timeSource);
     }
 
-    public boolean isReady(String key) {
+    public boolean isReady(Identifier key) {
         return super.isReady(localClient, key);
     }
 
-    public Duration remaining(String key) {
+    public Duration remaining(Identifier key) {
         return super.remaining(localClient, key);
     }
 
-    public void reset(String key) {
+    public void reset(Identifier key) {
         super.reset(localClient, key);
     }
 
@@ -53,4 +86,3 @@ public class ClientCooldownManager<T> extends AbstractCooldownManager<T> {
 
     public UUID getLocalClient() { return localClient; }
 }
-

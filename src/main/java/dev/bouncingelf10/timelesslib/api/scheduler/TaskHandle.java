@@ -1,11 +1,14 @@
 package dev.bouncingelf10.timelesslib.api.scheduler;
 
 import dev.bouncingelf10.timelesslib.api.time.Duration;
+import net.minecraft.resources.Identifier;
 
 import java.util.Optional;
 
 /**
- * Represents a scheduled task that can be controlled at runtime.
+ * Represents a scheduled task that can be controlled at runtime. <br>
+ * Implemented by plain scheduled tasks, {@link Sequence} handles, and {@code Countdown} handles, so the same
+ * cancel/pause/resume vocabulary applies everywhere in the scheduler and countdown APIs.
  */
 public interface TaskHandle {
 
@@ -67,5 +70,5 @@ public interface TaskHandle {
     /**
      * @return unique ID of this task
      */
-    String id();
+    Identifier id();
 }
