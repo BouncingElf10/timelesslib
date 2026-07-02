@@ -14,7 +14,7 @@ public class TimelessMixin {
     @Inject(method = "runTick(Z)V", at = @At("TAIL"))
     private void onRunTick(boolean partialTick, CallbackInfo ci) {
         TimelessClock.update();
-        TimelessLibClient.getClientAnimationManager().update();
+        TimelessLibClient.animations().update();
     }
 }
 

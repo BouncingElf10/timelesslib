@@ -5,15 +5,14 @@ import dev.bouncingelf10.timelesslib.api.clock.TimeSources;
 import dev.bouncingelf10.timelesslib.api.clock.TimelessClock;
 import dev.bouncingelf10.timelesslib.api.animation.keyframes.KeyframeDouble;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
-import dev.bouncingelf10.timelesslib.api.animation.channels.ChannelDouble;
-import dev.bouncingelf10.timelesslib.api.animation.channels.ChannelVec3;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.*;
 import java.util.function.Consumer;
 
 public class AnimationTimeline {
-    private String timelineId;
+    private ResourceLocation timelineId;
 
     private final Map<String, ChannelDouble> doubleChannels = new LinkedHashMap<>();
     private final Map<String, ChannelVec3> vec3Channels = new LinkedHashMap<>();
@@ -39,11 +38,11 @@ public class AnimationTimeline {
     private TimeSource timeSource = TimeSources.GAME_TIME;
     private long lastTimelineNanoTime = timeSource.now();
 
-    public AnimationTimeline(String timelineId) {
+    AnimationTimeline(ResourceLocation timelineId) {
         this.timelineId = Objects.requireNonNull(timelineId);
     }
 
-    public String id() { return timelineId; }
+    public ResourceLocation id() { return timelineId; }
 
     public AnimationTimeline loop(boolean enabled) { this.loop = enabled; return this; }
     public AnimationTimeline pingPong(boolean enabled) { this.pingPong = enabled; return this; }
@@ -247,8 +246,6 @@ public class AnimationTimeline {
 
     private void markDurationDirty() { durationDirty = true; }
 
-    private void markDurationDirtyPublic() { markDurationDirty(); }
-
     /**
      * Binds a double consumer to the specified channel. <br>
      * Normally you should call this in the channel itself {@link ChannelDouble#bind(Consumer)} and I advise you to not use this method.
@@ -269,7 +266,8 @@ public class AnimationTimeline {
     }
 
     /**
-     * Creates a copy of this timeline.
+     * Creates a detached copy of this timeline, not registered with any {@link AnimationManager}. <br>
+     * Combine with {@link #randomiseId()} and {@link AnimationManager#addTimeline(AnimationTimeline)} to spawn procedural instances of a template timeline.
      */
     public AnimationTimeline copy() {
         AnimationTimeline copy = new AnimationTimeline(this.timelineId);
@@ -286,10 +284,11 @@ public class AnimationTimeline {
     }
 
     /**
-     * Randomizes the ID of this timeline. Useful for procedural timelines.
+     * Randomizes the ID of this timeline by appending a random suffix to its path, keeping the same namespace. <br>
+     * Useful for procedural timelines - see {@link #copy()}.
      */
     public AnimationTimeline randomiseId() {
-        this.timelineId = this.timelineId + "-" + UUID.randomUUID();
+        this.timelineId = ResourceLocation.fromNamespaceAndPath(this.timelineId.getNamespace(), this.timelineId.getPath() + "-" + UUID.randomUUID());
         return this;
     }
 }

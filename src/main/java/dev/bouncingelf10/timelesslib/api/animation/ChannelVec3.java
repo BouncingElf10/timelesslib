@@ -1,6 +1,5 @@
-package dev.bouncingelf10.timelesslib.api.animation.channels;
+package dev.bouncingelf10.timelesslib.api.animation;
 
-import dev.bouncingelf10.timelesslib.api.animation.*;
 import dev.bouncingelf10.timelesslib.api.animation.keyframes.KeyframeDouble;
 import dev.bouncingelf10.timelesslib.api.animation.keyframes.KeyframeVec3;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
@@ -16,7 +15,7 @@ public class ChannelVec3 {
     private Easing defaultEasing = Easing.LINEAR;
     private Consumer<Vec3> boundConsumer = vec -> {};
 
-    public ChannelVec3(String name) {
+    ChannelVec3(String name) {
         this.name = Objects.requireNonNull(name);
     }
 

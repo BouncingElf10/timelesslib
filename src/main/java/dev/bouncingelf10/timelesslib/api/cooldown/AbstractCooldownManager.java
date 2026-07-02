@@ -2,38 +2,35 @@ package dev.bouncingelf10.timelesslib.api.cooldown;
 
 import dev.bouncingelf10.timelesslib.api.clock.TimeSource;
 import dev.bouncingelf10.timelesslib.api.clock.TimeSources;
-import dev.bouncingelf10.timelesslib.api.countdown.Countdown;
-import dev.bouncingelf10.timelesslib.api.countdown.CountdownManager;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Supplier;
 
-public abstract class AbstractCooldownManager<T> extends CountdownManager<T> {
-    private final Map<UUID, Map<String, Countdown>> activeCooldowns = new ConcurrentHashMap<>();
-
-    protected AbstractCooldownManager(Supplier<T> context) {
-        super(context);
-    }
-
-    protected AbstractCooldownManager(Supplier<T> context, int poolSize) {
-        super(context, poolSize);
-    }
+abstract class AbstractCooldownManager {
+    private final Map<UUID, Map<ResourceLocation, Cooldown>> activeCooldowns = new ConcurrentHashMap<>();
 
     protected abstract UUID normalizeOwner(UUID owner);
+
+    /**
+     * Constructs the underlying countdown-backed cooldown. Implementations must invoke {@code onFinishCleanup}
+     * exactly once, whether the cooldown expires naturally or {@link Cooldown#reset()} is called early -
+     * this is what keeps the owner/key bookkeeping in sync (see {@link #reset(UUID, ResourceLocation)}).
+     */
+    protected abstract Cooldown newCooldown(Duration duration, Duration tickInterval, TimeSource timeSource, Runnable onFinishCleanup);
 
     /**
      * Starts a cooldown for the given owner.
      * @param owner Owner of the cooldown.
      * @param key Cooldown key.
      * @param duration Cooldown duration.
-     * @return {@link Countdown}
+     * @return {@link Cooldown}
      * @see TimeSources
      */
-    public Countdown start(UUID owner, String key, Duration duration) {
+    public Cooldown start(UUID owner, ResourceLocation key, Duration duration) {
         return startCooldown(owner, key, duration, TimeSources.GAME_TIME);
     }
 
@@ -42,10 +39,10 @@ public abstract class AbstractCooldownManager<T> extends CountdownManager<T> {
      * @param owner Owner of the cooldown.
      * @param key Cooldown key.
      * @param duration Cooldown duration.
-     * @return {@link Countdown}
+     * @return {@link Cooldown}
      * @see TimeSources
      */
-    public Countdown startRealtime(UUID owner, String key, Duration duration) {
+    public Cooldown startRealtime(UUID owner, ResourceLocation key, Duration duration) {
         return startCooldown(owner, key, duration, TimeSources.REAL_TIME);
     }
 
@@ -55,75 +52,78 @@ public abstract class AbstractCooldownManager<T> extends CountdownManager<T> {
      * @param key Cooldown key.
      * @param duration Cooldown duration.
      * @param timeSource Time source to use for the cooldown.
-     * @return {@link Countdown}
+     * @return {@link Cooldown}
      * @see TimeSources
      */
-    public Countdown startIfAbsent(UUID owner, String key, Duration duration, TimeSource timeSource) {
-        owner = normalizeOwner(owner);
-
-        UUID finalOwner = owner;
+    public Cooldown startIfAbsent(UUID owner, ResourceLocation key, Duration duration, TimeSource timeSource) {
+        UUID normalized = normalizeOwner(owner);
         return activeCooldowns
-                .computeIfAbsent(owner, o -> new ConcurrentHashMap<>())
-                .computeIfAbsent(key, k -> startCooldownInternal(finalOwner, key, duration, timeSource));
+                .computeIfAbsent(normalized, o -> new ConcurrentHashMap<>())
+                .computeIfAbsent(key, k -> startCooldownInternal(normalized, key, duration, timeSource));
     }
 
     /**
      * Checks if a cooldown is ready for the given owner and key.<br>
-     * Note: "Ready" means that the cooldown has finished.
+     * Note: "Ready" means that the cooldown has finished (or was never started).
      * @param owner Owner of the cooldown.
      * @param key Cooldown key.
      * @return true if the cooldown is ready, false otherwise.
      */
-    public boolean isReady(UUID owner, String key) {
-        owner = normalizeOwner(owner);
-        Map<String, Countdown> ownerCooldowns = activeCooldowns.get(owner);
+    public boolean isReady(UUID owner, ResourceLocation key) {
+        UUID normalized = normalizeOwner(owner);
+        Map<ResourceLocation, Cooldown> ownerCooldowns = activeCooldowns.get(normalized);
         return ownerCooldowns == null || !ownerCooldowns.containsKey(key);
     }
 
-    public Duration remaining(UUID owner, String key) {
-        owner = normalizeOwner(owner);
-        Countdown countdown = activeCooldowns.getOrDefault(owner, Collections.emptyMap()).get(key);
-        return countdown == null ? Duration.zero() : countdown.remaining();
+    public Duration remaining(UUID owner, ResourceLocation key) {
+        UUID normalized = normalizeOwner(owner);
+        Cooldown cooldown = activeCooldowns.getOrDefault(normalized, Collections.emptyMap()).get(key);
+        return cooldown == null ? Duration.zero() : cooldown.remaining();
     }
 
-    public void reset(UUID owner, String key) {
-        owner = normalizeOwner(owner);
-        Map<String, Countdown> ownerCooldowns = activeCooldowns.get(owner);
+    /**
+     * Cancels the cooldown for the given owner and key, making it immediately ready. <br>
+     * This is the one true cancellation path - it always keeps the owner/key bookkeeping in sync,
+     * whether called directly or via {@link Cooldown#reset()}.
+     */
+    public void reset(UUID owner, ResourceLocation key) {
+        UUID normalized = normalizeOwner(owner);
+        Map<ResourceLocation, Cooldown> ownerCooldowns = activeCooldowns.get(normalized);
         if (ownerCooldowns != null) {
-            Countdown countdown = ownerCooldowns.remove(key);
-            if (countdown != null) countdown.cancel();
-            if (ownerCooldowns.isEmpty()) activeCooldowns.remove(owner);
+            Cooldown cooldown = ownerCooldowns.remove(key);
+            if (cooldown != null) cooldown.reset();
+            if (ownerCooldowns.isEmpty()) activeCooldowns.remove(normalized);
         }
     }
 
     /**
-     * You should probably use {@link #reset(UUID, String)} instead. Especially if you're NOT using a custom CooldownManager.
+     * You should probably use {@link #reset(UUID, ResourceLocation)} instead. Especially if you're NOT using a custom key scheme.
      */
     public void resetAll(UUID owner) {
-        owner = normalizeOwner(owner);
-        Map<String, Countdown> ownerCooldowns = activeCooldowns.remove(owner);
+        UUID normalized = normalizeOwner(owner);
+        Map<ResourceLocation, Cooldown> ownerCooldowns = activeCooldowns.remove(normalized);
         if (ownerCooldowns != null) {
-            ownerCooldowns.values().forEach(Countdown::cancel);
+            ownerCooldowns.values().forEach(Cooldown::reset);
         }
     }
 
-    private Countdown startCooldown(UUID owner, String key, Duration duration, TimeSource timeSource) {
-        owner = normalizeOwner(owner);
-        reset(owner, key);
-        return startCooldownInternal(owner, key, duration, timeSource);
+    private Cooldown startCooldown(UUID owner, ResourceLocation key, Duration duration, TimeSource timeSource) {
+        UUID normalized = normalizeOwner(owner);
+        reset(normalized, key);
+        return startCooldownInternal(normalized, key, duration, timeSource);
     }
 
-    private Countdown startCooldownInternal(UUID owner, String key, Duration duration, TimeSource timeSource) {
-        Countdown countdown = start(duration, Duration.TICK, timeSource);
-        countdown.onFinish(ctx -> {
-            Map<String, Countdown> ownerCooldowns = activeCooldowns.get(owner);
+    private Cooldown startCooldownInternal(UUID owner, ResourceLocation key, Duration duration, TimeSource timeSource) {
+        Runnable cleanup = () -> {
+            Map<ResourceLocation, Cooldown> ownerCooldowns = activeCooldowns.get(owner);
             if (ownerCooldowns != null) {
                 ownerCooldowns.remove(key);
                 if (ownerCooldowns.isEmpty()) activeCooldowns.remove(owner);
             }
-        });
+        };
 
-        activeCooldowns.computeIfAbsent(owner, o -> new ConcurrentHashMap<>()).put(key, countdown);
-        return countdown;
+        Cooldown cooldown = newCooldown(duration, Duration.TICK, timeSource, cleanup);
+        activeCooldowns.computeIfAbsent(owner, o -> new ConcurrentHashMap<>()).put(key, cooldown);
+        return cooldown;
     }
 }
