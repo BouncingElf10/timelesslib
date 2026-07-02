@@ -1,6 +1,5 @@
-package dev.bouncingelf10.timelesslib.api.animation.channels;
+package dev.bouncingelf10.timelesslib.api.animation;
 
-import dev.bouncingelf10.timelesslib.api.animation.*;
 import dev.bouncingelf10.timelesslib.api.animation.keyframes.KeyframeDouble;
 import dev.bouncingelf10.timelesslib.api.animation.keyframes.KeyframeVec3;
 import dev.bouncingelf10.timelesslib.api.time.Duration;
@@ -16,7 +15,7 @@ public class ChannelVec3 {
     private Easing defaultEasing = Easing.LINEAR;
     private Consumer<Vec3> boundConsumer = vec -> {};
 
-    public ChannelVec3(String name) {
+    ChannelVec3(String name) {
         this.name = Objects.requireNonNull(name);
     }
 
@@ -196,6 +195,14 @@ public class ChannelVec3 {
         }
 
         boundConsumer.accept(outputValue);
+    }
+
+    public ChannelVec3 copy() {
+        ChannelVec3 copy = new ChannelVec3(this.name);
+        copy.keyframes.addAll(this.keyframes);
+        copy.defaultInterpolation = this.defaultInterpolation;
+        copy.defaultEasing = this.defaultEasing;
+        return copy;
     }
 
     private double catmullRom(double p0, double p1, double p2, double p3, double t) {

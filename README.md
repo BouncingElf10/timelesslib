@@ -55,7 +55,7 @@ You can check the version of timelesslib on the versions tab or in the dropdown 
 
 | TimelessLib Version              | Minecraft Versions           | Loader |
 | -------------------------------- | ---------------------------- | ------ |
-| **1.0.16-fabric-1.20.5** | 1.21–1.21.10 / 1.20.5–1.20.6 | Fabric |
+| **2.0.0-fabric-1.20.5-1.21.11**  | 1.20.5–1.21.11               | Fabric |
 | **1.0.16-fabric-1.19.3-1.20.4**  | 1.20–1.20.4 / 1.19.3–1.19.4  | Fabric |
 | **1.0.16-fabric-1.19-1.19.2**    | 1.19–1.19.2                  | Fabric |
 | **1.0.16-fabric-1.17-1.18.2**    | 1.18.x / 1.17.x              | Fabric |
