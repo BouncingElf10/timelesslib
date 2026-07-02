@@ -1,1 +1,1 @@
-Made the animation manager work smoother
+2.0.0: API Consistency and bugfixes
