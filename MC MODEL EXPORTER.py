@@ -30,7 +30,7 @@ Usage:    N-panel > "MC Model" tab, pick a source mode, Export
 bl_info = {
     "name":        "MC Model Exporter (TLMDL)",
     "author":      "TimelessLib Pipeline",
-    "version":     (2, 0, 0),
+    "version":     (2, 2, 0),
     "blender":     (4, 0, 0),
     "location":    "View3D > Sidebar > MC Model",
     "description": "Export models + animations to the TimelessLib binary .tlmdl format",
@@ -52,7 +52,7 @@ from bpy.types import Panel, Operator, PropertyGroup
 
 MAGIC          = b"TLMDL"
 VERSION_MAJOR  = 2
-VERSION_MINOR  = 0
+VERSION_MINOR  = 1
 
 # Chunk identifiers (4 ASCII bytes each)
 CHUNK_STRT = b"STRT"   # string table  (must come first, others reference it)
@@ -270,6 +270,8 @@ class ExportContext:
         self.strings   = StringTable()
         self.settings  = settings
         self.fps       = fps
+        self.scene_name = ""       # filled by export_scene
+        self.frame_end  = 0        # scene frame_end, filled by export_scene
 
         # object registries
         self.objects        = []          # ordered exported bpy objects
@@ -348,6 +350,19 @@ def collect_objects(context, settings):
             expanded.add(p)
             p = p.parent
 
+    # Pull in armatures referenced by the exported meshes' Armature modifiers,
+    # otherwise their skin weights (and bone animation) would be silently
+    # dropped when the armature object itself wasn't selected/tagged.
+    for obj in list(expanded):
+        for m in obj.modifiers:
+            if m.type == 'ARMATURE' and m.object is not None:
+                arm = m.object
+                expanded.add(arm)
+                p = arm.parent
+                while p is not None:
+                    expanded.add(p)
+                    p = p.parent
+
     def depth(o):
         d, p = 0, o.parent
         while p is not None:
@@ -378,17 +393,17 @@ def build_nodes(ctx):
         parent_idx = ctx.obj_to_node.get(obj.parent, -1)
         ntype = node_type_of(obj)
 
-        # Local transform (relative to parent). matrix_local already folds in
-        # the parent-inverse, so it is correct for parented objects.
-        local = obj.matrix_local.copy()
-        if obj.parent is None or obj.parent not in ctx.obj_to_node:
-            # Root of an exported sub-tree → apply the Y-up conversion here.
-            if ctx.settings.y_up:
-                local = YUP_CONVERSION @ obj.matrix_world.copy()
-            else:
-                local = obj.matrix_world.copy()
-
-        t, r, s = local.decompose()
+        # Store the NATIVE local transform (matrix_basis) — this is exactly what
+        # the animation channels (location / rotation_* / scale) drive, so rest
+        # and animated poses live in the same space and stay consistent.
+        #
+        # Blender reconstructs world as:
+        #     matrix_world = parent.matrix_world @ matrix_parent_inverse @ matrix_basis
+        # so we also export matrix_parent_inverse and let the importer apply the
+        # same formula. The Z-up→Y-up conversion is NOT baked here; it is a single
+        # global root_transform in META (see build_meta), which keeps animated
+        # roots from losing the conversion.
+        t, r, s = obj.matrix_basis.decompose()
 
         w.u32(ctx.s(obj.name))
         w.i32(parent_idx)
@@ -396,8 +411,7 @@ def build_nodes(ctx):
         w.vec3(t)
         w.quat(r)
         w.vec3(s)
-        # mesh + skeleton references filled after those chunks are built.
-        w.i32(-1)  # mesh_index placeholder, patched below is complex → resolved via map
+        w.matrix4(obj.matrix_parent_inverse)   # constant parent-inverse offset
         w.i32(ctx.arm_to_skel.get(obj, -1) if obj.type == 'ARMATURE' else -1)
 
     return bytes(w)
@@ -929,16 +943,45 @@ def collect_action(obj, ctx):
 
 
 def build_animations(ctx):
-    """One animation clip per exported object that owns an action."""
+    """
+    Build animation clips.
+
+    Blender keeps each object's animation in its own Action, so a scene where an
+    empty, an armature and some props all animate on one shared timeline holds
+    several Actions. Exporting those as separate clips means a player that only
+    runs one clip animates just a single object (the classic "armature has no
+    anims / length is only the empty loop" symptom).
+
+    With `single_clip` (default), every animated object's tracks are merged into
+    ONE clip on a shared timeline so playing that clip animates everything at
+    once. Set it off to keep one clip per Action.
+    """
     settings = ctx.settings
     clips = []
 
     if settings.include_animations:
-        for obj in ctx.objects:
-            tracks, last = collect_action(obj, ctx)
-            if tracks:
-                name = obj.animation_data.action.name if obj.animation_data and obj.animation_data.action else obj.name
-                clips.append((name, tracks, last))
+        if settings.single_clip:
+            merged = {}          # track_key → channel list
+            last = 0.0
+            for obj in ctx.objects:
+                tracks, l = collect_action(obj, ctx)
+                if not tracks:
+                    continue
+                last = max(last, l)
+                # track keys are unique per target (node index / skel+bone), so
+                # merging never collides.
+                for key, channels in tracks.items():
+                    merged.setdefault(key, []).extend(channels)
+            if merged:
+                clip_name = settings.model_name or ctx.scene_name or "animation"
+                clips.append((clip_name, merged, last))
+        else:
+            for obj in ctx.objects:
+                tracks, last = collect_action(obj, ctx)
+                if tracks:
+                    name = (obj.animation_data.action.name
+                            if obj.animation_data and obj.animation_data.action else obj.name)
+                    clips.append((name, tracks, last))
 
     w = BinWriter()
     w.u32(len(clips))
@@ -989,6 +1032,11 @@ def build_meta(ctx, scene, node_count, mesh_count, anim_count):
     w.i32(scene.frame_start)
     w.i32(scene.frame_end)
     w.u8(1 if ctx.settings.y_up else 0)      # 1 = Y-up, 0 = Z-up (Blender native)
+    # Global root transform: seed the world matrix of every root node with this.
+    # Carries the Z-up→Y-up conversion so it applies uniformly to rest AND
+    # animated transforms (never baked into individual, animatable nodes).
+    root_transform = YUP_CONVERSION if ctx.settings.y_up else Matrix.Identity(4)
+    w.matrix4(root_transform)
     w.u32(ctx.s("MC Model Exporter (TLMDL) v%d.%d" % (VERSION_MAJOR, VERSION_MINOR)))
     w.u32(node_count)
     w.u32(mesh_count)
@@ -1000,6 +1048,8 @@ def export_scene(context, settings, filepath):
     scene = context.scene
     fps = scene.render.fps / scene.render.fps_base
     ctx = ExportContext(settings, fps)
+    ctx.scene_name = scene.name
+    ctx.frame_end = scene.frame_end
 
     ordered, _ = collect_objects(context, settings)
     ctx.objects = ordered
@@ -1171,6 +1221,13 @@ class McModelSettings(PropertyGroup):
         description="Export object + pose-bone F-curve animation data",
         default=True,
     )
+    single_clip: BoolProperty(
+        name="Combine Into One Clip",
+        description="Merge every object's animation onto one shared-timeline clip "
+                    "(so a player that runs one clip animates the whole scene). "
+                    "Turn off to export one clip per Blender Action",
+        default=True,
+    )
     embed_textures: BoolProperty(
         name="Embed Textures",
         description="Store image bytes inside the file instead of external paths",
@@ -1214,6 +1271,9 @@ class MCMODEL_PT_MainPanel(Panel):
         box.label(text="Options", icon="MODIFIER")
         box.prop(settings, "apply_modifiers")
         box.prop(settings, "include_animations")
+        row = box.row()
+        row.enabled = settings.include_animations
+        row.prop(settings, "single_clip")
         box.prop(settings, "embed_textures")
         box.prop(settings, "y_up")
         box.prop(settings, "max_influences")
