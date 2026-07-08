@@ -30,7 +30,7 @@ Usage:    N-panel > "MC Model" tab, pick a source mode, Export
 bl_info = {
     "name":        "MC Model Exporter (TLMDL)",
     "author":      "TimelessLib Pipeline",
-    "version":     (2, 2, 0),
+    "version":     (2, 3, 0),
     "blender":     (4, 0, 0),
     "location":    "View3D > Sidebar > MC Model",
     "description": "Export models + animations to the TimelessLib binary .tlmdl format",
@@ -660,16 +660,47 @@ def find_principled(mat):
     return None
 
 
+def _image_from_socket(socket, seen=None):
+    """Walk upstream from a linked input socket to the first Image Texture node,
+    transparently passing through intermediate nodes (Normal Map, Bump, Mapping,
+    reroutes, color-adjust / mix nodes, …) that sit between the image and the
+    shader input."""
+    if seen is None:
+        seen = set()
+    if socket is None or not socket.is_linked:
+        return None
+    for link in socket.links:
+        node = link.from_node
+        if node is None or node.name in seen:
+            continue
+        seen.add(node.name)
+        if node.type == 'TEX_IMAGE' and node.image:
+            return node.image
+        # Not an image node — recurse through this node's own inputs.
+        for inp in node.inputs:
+            img = _image_from_socket(inp, seen)
+            if img is not None:
+                return img
+    return None
+
+
 def texture_from_input(node, socket_name):
-    """Follow a Principled input socket back to a connected Image Texture node."""
+    """Follow a Principled input socket back to a connected Image Texture node,
+    traversing any intermediate nodes along the way."""
     if node is None or socket_name not in node.inputs:
         return None
-    inp = node.inputs[socket_name]
-    if not inp.is_linked:
+    return _image_from_socket(node.inputs[socket_name])
+
+
+def first_image_in_material(mat):
+    """Fallback: return the first Image Texture datablock used anywhere in the
+    material's node tree. Covers unlit/emission setups (no Principled BSDF) and
+    images that are only connected to a Material Output."""
+    if not mat or not mat.use_nodes or not mat.node_tree:
         return None
-    from_node = inp.links[0].from_node
-    if from_node.type == 'TEX_IMAGE' and from_node.image:
-        return from_node.image
+    for node in mat.node_tree.nodes:
+        if node.type == 'TEX_IMAGE' and node.image:
+            return node.image
     return None
 
 
@@ -724,6 +755,14 @@ def build_materials(ctx):
             img = texture_from_input(bsdf, socket)
             if img is not None:
                 bindings.append((usage, ctx.image_ref(img)))
+
+        # Fallback: no base-color texture found via the BSDF (unlit/emission
+        # material, image wired only to Material Output, or no Principled node
+        # at all) — bind the first image texture used anywhere in the material.
+        if not any(u == TEX_BASE_COLOR for u, _ in bindings):
+            img = first_image_in_material(mat)
+            if img is not None:
+                bindings.append((TEX_BASE_COLOR, ctx.image_ref(img)))
 
         w.u8(len(bindings))
         for usage, tex_idx in bindings:
