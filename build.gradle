@@ -36,6 +36,10 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
+
 	withSourcesJar()
 	withJavadocJar()
 
@@ -56,20 +60,20 @@ publishMods {
 	additionalFiles.from(tasks.sourcesJar.archiveFile)
 	additionalFiles.from(tasks.javadocJar.archiveFile)
 
-	changelog = "2.0.0: API Consistency and bugfixes"
+	changelog = "Updated to 26.3"
 	type = STABLE
 	modLoaders.add("fabric")
 
 	modrinth {
 		projectId = "vKDSSPpv"
 		accessToken = providers.environmentVariable("MODRINTH_TOKEN")
-		minecraftVersions.add("26.2")
+		minecraftVersions.add("26.3")
 	}
 
 	curseforge {
 		projectId = "1490074"
 		accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
-		minecraftVersions.add("26.2")
+		minecraftVersions.add("26.3")
 	}
 }
 
