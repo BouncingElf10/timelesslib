@@ -4,14 +4,19 @@ import java.util.function.DoubleUnaryOperator;
 
 /**
  * A collection of easing functions taken from <a href="https://easings.net/">easings.net</a>.
+ * <p>
+ * Input is clamped to [0, 1]. Output is 0 at x = 0 and 1 at x = 1, but may leave [0, 1] in between (Back, Elastic, custom bezier).
  */
 public abstract class Easing {
     private final DoubleUnaryOperator operator;
 
     private Easing(DoubleUnaryOperator operator) { this.operator = operator; }
 
+    /**
+     * Input is clamped to [0, 1]. Output is 0 at x = 0 and 1 at x = 1, but may leave [0, 1] in between (Back, Elastic, custom bezier).
+     */
     public double apply(double x) {
-        return clamp01(operator.applyAsDouble(clamp01(x)));
+        return operator.applyAsDouble(clamp01(x));
     }
 
     private static double clamp01(double a) { return a < 0 ? 0 : a > 1 ? 1 : a; }
@@ -115,11 +120,13 @@ public abstract class Easing {
     }
 
     public static Easing createBezier(double x1, double y1, double x2, double y2) {
-        final double cx1 = clamp01(x1), cy1 = clamp01(y1), cx2 = clamp01(x2), cy2 = clamp01(y2);
-        return of(x -> cubicBezier(x, cx1, cy1, cx2, cy2));
+        final double cx1 = clamp01(x1), cx2 = clamp01(x2);
+        return of(x -> cubicBezier(x, cx1, y1, cx2, y2));
     }
 
     private static double cubicBezier(double x, double x1, double y1, double x2, double y2) {
+        if (x == 0) return 0.0;
+        if (x == 1) return 1.0;
         DoubleUnaryOperator sampleCurveX = (t) -> ((3 * x1 - 3 * x2 + 1) * t * t * t) + ((-6 * x1 + 3 * x2) * t * t) + (3 * x1 * t);
         DoubleUnaryOperator sampleCurveY = (t) -> ((3 * y1 - 3 * y2 + 1) * t * t * t) + ((-6 * y1 + 3 * y2) * t * t) + (3 * y1 * t);
 
@@ -131,6 +138,6 @@ public abstract class Easing {
             if (xt > x) high = t; else low = t;
         }
         double y = sampleCurveY.applyAsDouble(t);
-        return clamp01(y);
+        return y;
     }
 }
