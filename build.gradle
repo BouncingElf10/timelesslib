@@ -60,7 +60,7 @@ publishMods {
 	additionalFiles.from(tasks.sourcesJar.archiveFile)
 	additionalFiles.from(tasks.javadocJar.archiveFile)
 
-	changelog = "Updated to 26.3"
+	changelog = "Fixed clamping issue with easings"
 	type = STABLE
 	modLoaders.add("fabric")
 
