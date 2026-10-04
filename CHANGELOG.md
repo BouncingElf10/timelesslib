@@ -1,0 +1,1 @@
+Fixed clamping issue with easings

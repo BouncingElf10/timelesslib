@@ -85,7 +85,7 @@ publishMods {
 	additionalFiles.from(tasks.remapSourcesJar.archiveFile)
 	additionalFiles.from(tasks.javadocJar.archiveFile)
 
-	changelog = "2.0.0: API Consistency and bugfixes"
+	changelog = "Fixed clamping issue with easings"
 	type = STABLE
 	modLoaders.add("fabric")
 
